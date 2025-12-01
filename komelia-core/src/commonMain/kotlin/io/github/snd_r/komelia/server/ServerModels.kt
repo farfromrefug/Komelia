@@ -19,7 +19,6 @@ import kotlinx.serialization.Serializable
 /**
  * Unique identifier for server entities
  */
-@JvmInline
 @Serializable
 value class ServerId(val value: String)
 

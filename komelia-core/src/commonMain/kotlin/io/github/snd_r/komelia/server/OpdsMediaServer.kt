@@ -7,9 +7,6 @@ import io.github.snd_r.komelia.opds.model.OpdsLinkRel
 import io.github.snd_r.komelia.opds.model.OpdsMetadata
 import io.github.snd_r.komelia.opds.model.OpdsPublication
 import io.github.snd_r.komelia.opds.model.getAcquisitionLink
-import io.github.snd_r.komelia.opds.model.getAuthorsString
-import io.github.snd_r.komelia.opds.model.getCoverUrl
-import io.github.snd_r.komelia.opds.model.getNextLink
 import io.github.snd_r.komelia.opds.model.getSearchLink
 import io.github.snd_r.komelia.opds.model.getThumbnailUrl
 import kotlinx.datetime.Instant
