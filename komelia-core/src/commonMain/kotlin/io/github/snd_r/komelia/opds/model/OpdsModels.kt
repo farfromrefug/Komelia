@@ -263,7 +263,7 @@ object OpdsLinkRel {
  * Well-known OPDS media types
  */
 object OpdsMediaType {
-    const val OPDS_FEED = "application/opds+json"
+    const val OPDS_FEED = "application/json"
     const val OPDS_PUBLICATION = "application/opds-publication+json"
     const val OPDS_AUTHENTICATION = "application/opds-authentication+json"
     const val OPENSEARCH = "application/opensearchdescription+xml"
