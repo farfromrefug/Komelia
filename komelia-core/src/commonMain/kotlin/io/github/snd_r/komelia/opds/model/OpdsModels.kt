@@ -266,6 +266,12 @@ object OpdsMediaType {
     const val OPDS_FEED = "application/json"
     const val OPDS_PUBLICATION = "application/opds-publication+json"
     const val OPDS_AUTHENTICATION = "application/opds-authentication+json"
+    
+    // OPDS 1.x (Atom/XML)
+    const val ATOM = "application/atom+xml"
+    const val ATOM_CATALOG = "application/atom+xml;profile=opds-catalog"
+    const val ATOM_ENTRY = "application/atom+xml;type=entry"
+    
     const val OPENSEARCH = "application/opensearchdescription+xml"
     
     // Common book formats
