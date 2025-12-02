@@ -188,19 +188,23 @@ class ViewModelFactory(
     }
 
     fun getNavigationViewModel(navigator: Navigator): MainScreenViewModel {
+        val isOpds = appSharedState.isOpdsMode
         return MainScreenViewModel(
-            libraryClient = komgaClientFactory.libraryClient(),
+            libraryClient = if (isOpds) null else komgaClientFactory.libraryClient(),
             appNotifications = dependencies.appNotifications,
             navigator = navigator,
-            komgaEvents = komgaEventSource.events,
+            komgaEvents = if (isOpds) null else komgaEventSource.events,
             screenReloadFlow = screenReloadEvents,
             searchBarState = SearchBarState(
-                seriesClient = komgaClientFactory.seriesClient(),
-                bookClient = komgaClientFactory.bookClient(),
+                seriesClient = if (isOpds) null else komgaClientFactory.seriesClient(),
+                bookClient = if (isOpds) null else komgaClientFactory.bookClient(),
                 appNotifications = dependencies.appNotifications,
-                libraries = komgaSharedState.libraries
+                libraries = komgaSharedState.libraries,
+                mediaServer = appSharedState.mediaServer.value,
+                isOpdsMode = isOpds
             ),
             libraries = komgaSharedState.libraries,
+            isOpdsMode = isOpds
         )
     }
 
