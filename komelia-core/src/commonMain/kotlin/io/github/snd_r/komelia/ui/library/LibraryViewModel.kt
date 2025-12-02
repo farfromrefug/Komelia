@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import io.github.snd_r.komelia.AppNotifications
+import io.github.snd_r.komelia.server.MediaServer
 import io.github.snd_r.komelia.settings.CommonSettingsRepository
 import io.github.snd_r.komelia.ui.LoadState
 import io.github.snd_r.komelia.ui.LoadState.Error
@@ -46,16 +47,18 @@ import snd.komga.client.sse.KomgaEvent.ReadListAdded
 import snd.komga.client.sse.KomgaEvent.ReadListDeleted
 
 class LibraryViewModel(
-    private val libraryClient: KomgaLibraryClient,
-    private val collectionClient: KomgaCollectionClient,
-    private val readListsClient: KomgaReadListClient,
-    seriesClient: KomgaSeriesClient,
-    referentialClient: KomgaReferentialClient,
+    private val libraryClient: KomgaLibraryClient?,
+    private val collectionClient: KomgaCollectionClient?,
+    private val readListsClient: KomgaReadListClient?,
+    seriesClient: KomgaSeriesClient?,
+    referentialClient: KomgaReferentialClient?,
 
     private val appNotifications: AppNotifications,
-    private val komgaEvents: SharedFlow<KomgaEvent>,
+    private val komgaEvents: SharedFlow<KomgaEvent>?,
     libraryFlow: Flow<KomgaLibrary?>,
     settingsRepository: CommonSettingsRepository,
+    private val mediaServer: MediaServer? = null,
+    private val isOpdsMode: Boolean = false,
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
     val library = libraryFlow.stateIn(screenModelScope, SharingStarted.Eagerly, null)
     val cardWidth = settingsRepository.getCardWidth().map { Dp(it.toFloat()) }
@@ -70,31 +73,54 @@ class LibraryViewModel(
     private val reloadEventsEnabled = MutableStateFlow(true)
     private val reloadJobsFlow = MutableSharedFlow<Unit>(1, 0, DROP_OLDEST)
 
-    val seriesTabState = LibrarySeriesTabState(
-        seriesClient = seriesClient,
-        referentialClient = referentialClient,
-        notifications = appNotifications,
-        komgaEvents = komgaEvents,
-        settingsRepository = settingsRepository,
-        library = library,
-        cardWidth = cardWidth,
-    )
-    val collectionsTabState = LibraryCollectionsTabState(
-        collectionClient = collectionClient,
-        appNotifications = appNotifications,
-        events = komgaEvents,
-        library = library,
-        cardWidth = cardWidth
-    )
-    val readListsTabState = LibraryReadListsTabState(
-        readListClient = readListsClient,
-        appNotifications = appNotifications,
-        komgaEvents = komgaEvents,
-        library = library,
-        cardWidth = cardWidth
-    )
-    val showToolbar = seriesTabState.isInEditMode.map { !it }
-        .stateIn(screenModelScope, SharingStarted.Eagerly, true)
+    val seriesTabState: LibrarySeriesTabState? = if (!isOpdsMode && seriesClient != null && referentialClient != null && komgaEvents != null) {
+        LibrarySeriesTabState(
+            seriesClient = seriesClient,
+            referentialClient = referentialClient,
+            notifications = appNotifications,
+            komgaEvents = komgaEvents,
+            settingsRepository = settingsRepository,
+            library = library,
+            cardWidth = cardWidth,
+        )
+    } else null
+    
+    val opdsSeriesTabState: OpdsLibrarySeriesTabState? = if (isOpdsMode && mediaServer != null) {
+        OpdsLibrarySeriesTabState(
+            mediaServer = mediaServer,
+            notifications = appNotifications,
+            settingsRepository = settingsRepository,
+            library = library,
+            cardWidth = cardWidth,
+        )
+    } else null
+    
+    val collectionsTabState: LibraryCollectionsTabState? = if (!isOpdsMode && collectionClient != null && komgaEvents != null) {
+        LibraryCollectionsTabState(
+            collectionClient = collectionClient,
+            appNotifications = appNotifications,
+            events = komgaEvents,
+            library = library,
+            cardWidth = cardWidth
+        )
+    } else null
+    
+    val readListsTabState: LibraryReadListsTabState? = if (!isOpdsMode && readListsClient != null && komgaEvents != null) {
+        LibraryReadListsTabState(
+            readListClient = readListsClient,
+            appNotifications = appNotifications,
+            komgaEvents = komgaEvents,
+            library = library,
+            cardWidth = cardWidth
+        )
+    } else null
+    
+    val showToolbar = if (seriesTabState != null) {
+        seriesTabState.isInEditMode.map { !it }
+            .stateIn(screenModelScope, SharingStarted.Eagerly, true)
+    } else {
+        MutableStateFlow(true)
+    }
 
     fun initialize(seriesFilter: SeriesScreenFilter? = null) {
         if (state.value !is Uninitialized) return
@@ -102,7 +128,9 @@ class LibraryViewModel(
         if (seriesFilter != null) toBrowseTab()
 
         screenModelScope.launch { loadItemCounts() }
-        startKomgaEventListener()
+        if (!isOpdsMode && komgaEvents != null) {
+            startKomgaEventListener()
+        }
 
         reloadJobsFlow.onEach {
             reloadEventsEnabled.first { it }
@@ -116,9 +144,12 @@ class LibraryViewModel(
         screenModelScope.launch {
             loadItemCounts()
             when (currentTab) {
-                SERIES -> seriesTabState.reload()
-                COLLECTIONS -> collectionsTabState.reload()
-                READ_LISTS -> readListsTabState.reload()
+                SERIES -> {
+                    seriesTabState?.reload()
+                    opdsSeriesTabState?.reload()
+                }
+                COLLECTIONS -> collectionsTabState?.reload()
+                READ_LISTS -> readListsTabState?.reload()
             }
         }
     }
@@ -128,13 +159,21 @@ class LibraryViewModel(
 
         appNotifications.runCatchingToNotifications {
             mutableState.value = Loading
-            val pageRequest = KomgaPageRequest(size = 0)
-            val libraryIds = listOfNotNull(library.value?.id)
-            collectionsCount = collectionClient.getAll(libraryIds = libraryIds, pageRequest = pageRequest).totalElements
-            readListsCount = readListsClient.getAll(libraryIds = libraryIds, pageRequest = pageRequest).totalElements
+            
+            if (isOpdsMode) {
+                // OPDS mode: Collections and ReadLists not available
+                collectionsCount = 0
+                readListsCount = 0
+                currentTab = SERIES
+            } else if (collectionClient != null && readListsClient != null) {
+                val pageRequest = KomgaPageRequest(size = 0)
+                val libraryIds = listOfNotNull(library.value?.id)
+                collectionsCount = collectionClient.getAll(libraryIds = libraryIds, pageRequest = pageRequest).totalElements
+                readListsCount = readListsClient.getAll(libraryIds = libraryIds, pageRequest = pageRequest).totalElements
 
-            if (collectionsCount == 0 && currentTab == COLLECTIONS) currentTab = SERIES
-            if (readListsCount == 0 && currentTab == READ_LISTS) currentTab = SERIES
+                if (collectionsCount == 0 && currentTab == COLLECTIONS) currentTab = SERIES
+                if (readListsCount == 0 && currentTab == READ_LISTS) currentTab = SERIES
+            }
             mutableState.value = Success(Unit)
         }.onFailure { mutableState.value = Error(it) }
     }
@@ -144,14 +183,18 @@ class LibraryViewModel(
     }
 
     fun toCollectionsTab() {
-        currentTab = COLLECTIONS
+        if (!isOpdsMode) currentTab = COLLECTIONS
     }
 
     fun toReadListsTab() {
-        currentTab = READ_LISTS
+        if (!isOpdsMode) currentTab = READ_LISTS
     }
 
-    fun libraryActions() = LibraryMenuActions(libraryClient, appNotifications, screenModelScope)
+    fun libraryActions(): LibraryMenuActions? {
+        return if (!isOpdsMode && libraryClient != null) {
+            LibraryMenuActions(libraryClient, appNotifications, screenModelScope)
+        } else null
+    }
 
     fun stopKomgaEventHandler() {
         reloadEventsEnabled.value = false
@@ -163,14 +206,14 @@ class LibraryViewModel(
     }
 
     private fun startKomgaEventListener() {
-        komgaEvents.onEach { event ->
+        komgaEvents?.onEach { event ->
             when (event) {
                 is ReadListAdded, is ReadListDeleted -> reloadJobsFlow.tryEmit(Unit)
                 is CollectionAdded, is CollectionDeleted -> reloadJobsFlow.tryEmit(Unit)
 
                 else -> {}
             }
-        }.launchIn(screenModelScope)
+        }?.launchIn(screenModelScope)
     }
 }
 
