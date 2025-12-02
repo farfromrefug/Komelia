@@ -1,13 +1,13 @@
 package io.github.snd_r.komelia.server
 
-import snd.komga.client.book.KomgaAuthor
 import snd.komga.client.book.KomgaBook
 import snd.komga.client.book.KomgaBookId
 import snd.komga.client.book.KomgaBookMetadata
-import snd.komga.client.book.KomgaBookReadProgress
-import snd.komga.client.book.KomgaMedia
 import snd.komga.client.book.KomgaMediaStatus
-import snd.komga.client.book.KomgaWebLink
+import snd.komga.client.book.Media
+import snd.komga.client.book.ReadProgress
+import snd.komga.client.common.KomgaAuthor
+import snd.komga.client.common.KomgaWebLink
 import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.series.KomgaSeries
 import snd.komga.client.series.KomgaSeriesBookMetadata
@@ -15,7 +15,6 @@ import snd.komga.client.series.KomgaSeriesId
 import snd.komga.client.series.KomgaSeriesMetadata
 import snd.komga.client.series.KomgaSeriesStatus
 import kotlin.time.Clock
-import kotlin.time.Instant
 
 /**
  * Utility functions to convert Server types to Komga types for UI compatibility.
@@ -27,6 +26,7 @@ object KomgaTypeConverters {
      * Convert a ServerBook to KomgaBook for UI compatibility
      */
     fun serverBookToKomgaBook(book: ServerBook): KomgaBook {
+        val now = Clock.System.now()
         return KomgaBook(
             id = KomgaBookId(book.id.value),
             seriesId = KomgaSeriesId(book.seriesId.value),
@@ -37,11 +37,12 @@ object KomgaTypeConverters {
             url = book.thumbnailUrl ?: "",
             sizeBytes = book.fileSize,
             size = "${book.fileSize / 1024}KB",
-            media = KomgaMedia(
+            media = Media(
                 status = KomgaMediaStatus.READY,
                 mediaType = book.mediaType ?: "",
                 pagesCount = book.pageCount,
                 comment = "",
+                mediaProfile = null,
                 epubDivinaCompatible = false
             ),
             metadata = KomgaBookMetadata(
@@ -67,26 +68,24 @@ object KomgaTypeConverters {
                     KomgaWebLink(it.label, it.url)
                 },
                 linksLock = false,
-                created = book.created,
-                lastModified = book.lastModified
+                created = book.created ?: now,
+                lastModified = book.lastModified ?: now
             ),
             readProgress = book.readProgress?.let {
-                KomgaBookReadProgress(
+                ReadProgress(
                     page = it.page,
                     completed = it.isCompleted,
                     readDate = it.readDate,
                     created = it.readDate,
-                    lastModified = it.lastReadDate,
-                    deviceId = "",
-                    deviceName = ""
+                    lastModified = it.lastReadDate
                 )
             },
             deleted = false,
             fileHash = "",
-            fileLastModified = book.lastModified,
+            fileLastModified = book.lastModified ?: now,
             oneshot = false,
-            created = book.created,
-            lastModified = book.lastModified
+            created = book.created ?: now,
+            lastModified = book.lastModified ?: now
         )
     }
 
@@ -131,9 +130,9 @@ object KomgaTypeConverters {
                 ageRatingLock = false,
                 language = series.metadata.language ?: "",
                 languageLock = false,
-                genres = series.metadata.genres.toList(),
+                genres = series.metadata.genres,
                 genresLock = false,
-                tags = series.metadata.tags.toList(),
+                tags = series.metadata.tags,
                 tagsLock = false,
                 totalBookCount = series.metadata.totalBookCount,
                 totalBookCountLock = false,
@@ -147,7 +146,7 @@ object KomgaTypeConverters {
 //                lastModified = series.lastModified
             ),
             booksMetadata = KomgaSeriesBookMetadata(
-                authors = series.metadata.authors,
+                authors = series.metadata.authors.map { KomgaAuthor(it.name, it.role) },
                 tags = series.metadata.tags,
                 summary = series.metadata.summary ?: "",
                 summaryNumber = "",

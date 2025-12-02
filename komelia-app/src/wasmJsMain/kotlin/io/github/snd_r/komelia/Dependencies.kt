@@ -21,6 +21,7 @@ import io.github.snd_r.komelia.image.coil.KomgaSeriesThumbnailMapper
 import io.github.snd_r.komelia.image.processing.ColorCorrectionStep
 import io.github.snd_r.komelia.image.processing.ImageProcessingPipeline
 import io.github.snd_r.komelia.platform.BrowserWindowState
+import io.github.snd_r.komelia.server.DefaultMediaServerFactory
 import io.github.snd_r.komelia.settings.CookieStoreSecretsRepository
 import io.github.snd_r.komelia.settings.ImageReaderSettingsRepository
 import io.ktor.client.*
@@ -116,6 +117,9 @@ suspend fun initDependencies(stateFlowScope: CoroutineScope): WasmDependencyCont
     
     val localReadProgressRepository = io.github.snd_r.komelia.settings.InMemoryLocalReadProgressRepository()
 
+    // Create MediaServerFactory for OPDS support
+    val mediaServerFactory = DefaultMediaServerFactory(httpClientProvider = { ktorClient })
+
     return WasmDependencyContainer(
         settingsRepository = appSettingsRepository,
         epubReaderSettingsRepository = epubReaderSettingsRepository,
@@ -130,7 +134,7 @@ suspend fun initDependencies(stateFlowScope: CoroutineScope): WasmDependencyCont
 
         komgaClientFactory = komgaClientFactory,
         komfClientFactory = komfClientFactory,
-        mediaServerFactory = null, // TODO: Initialize when OPDS support is fully integrated
+        mediaServerFactory = mediaServerFactory,
         appUpdater = null,
         coilImageLoader = coil,
         bookImageLoader = readerImageLoader,
