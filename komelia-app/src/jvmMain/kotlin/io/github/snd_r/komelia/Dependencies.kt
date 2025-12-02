@@ -258,6 +258,7 @@ suspend fun initDependencies(
         homeScreenFilterRepository = homeScreenFilterRepository,
 
         komgaClientFactory = komgaClientFactory,
+        mediaServerFactory = null, // TODO: Initialize when OPDS support is fully integrated
         appUpdater = appUpdater,
         coilImageLoader = coil,
         bookImageLoader = readerImageLoader,

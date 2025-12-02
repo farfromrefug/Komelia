@@ -40,6 +40,7 @@ import snd.komelia.db.repository.ActorReaderSettingsRepository
 import snd.komelia.db.repository.ActorSettingsRepository
 import snd.komelia.db.settings.LocalStorageSettingsRepository
 import snd.komelia.db.settings.NoopFontsRepository
+import snd.komelia.db.settings.NoopHomeScreenFilterRepository
 import snd.komelia.image.ImageDecoder
 import snd.komelia.image.wasm.client.WorkerImageDecoder
 import snd.komf.client.KomfClientFactory
@@ -50,6 +51,7 @@ suspend fun initDependencies(stateFlowScope: CoroutineScope): WasmDependencyCont
     workerDecoder.init()
 
     val localStorageRepository = LocalStorageSettingsRepository()
+    val homeScreenFilterRepository = NoopHomeScreenFilterRepository()
     val appSettingsRepository = ActorSettingsRepository(
         SettingsStateActor(
             localStorageRepository.getSettings(),
@@ -125,13 +127,15 @@ suspend fun initDependencies(stateFlowScope: CoroutineScope): WasmDependencyCont
 
         komgaClientFactory = komgaClientFactory,
         komfClientFactory = komfClientFactory,
+        mediaServerFactory = null, // TODO: Initialize when OPDS support is fully integrated
         appUpdater = null,
         coilImageLoader = coil,
         bookImageLoader = readerImageLoader,
         windowState = BrowserWindowState(),
         imageDecoder = workerDecoder,
         readerImageFactory = readerImageFactory,
-        colorCorrectionStep = colorCorrectionStep
+        colorCorrectionStep = colorCorrectionStep,
+        homeScreenFilterRepository = homeScreenFilterRepository
     )
 }
 

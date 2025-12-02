@@ -219,6 +219,7 @@ suspend fun initDependencies(
         appNotifications = appNotifications,
         appUpdater = appUpdater,
         komgaClientFactory = komgaClientFactory,
+        mediaServerFactory = null, // TODO: Initialize when OPDS support is fully integrated
         coilImageLoader = coil,
         platformContext = context,
         bookImageLoader = readerImageLoader,

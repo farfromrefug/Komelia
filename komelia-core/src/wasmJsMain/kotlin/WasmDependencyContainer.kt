@@ -12,6 +12,7 @@ import io.github.snd_r.komelia.image.KomeliaUpscaler
 import io.github.snd_r.komelia.image.ReaderImageFactory
 import io.github.snd_r.komelia.image.processing.ColorCorrectionStep
 import io.github.snd_r.komelia.platform.AppWindowState
+import io.github.snd_r.komelia.server.MediaServerFactory
 import io.github.snd_r.komelia.settings.CommonSettingsRepository
 import io.github.snd_r.komelia.settings.EpubReaderSettingsRepository
 import io.github.snd_r.komelia.settings.ImageReaderSettingsRepository
@@ -41,6 +42,7 @@ class WasmDependencyContainer(
 
     override val komgaClientFactory: KomgaClientFactory,
     override val komfClientFactory: KomfClientFactory,
+    override val mediaServerFactory: MediaServerFactory?,
     override val appUpdater: AppUpdater?,
     override val imageDecoder: ImageDecoder,
     override val coilImageLoader: ImageLoader,
