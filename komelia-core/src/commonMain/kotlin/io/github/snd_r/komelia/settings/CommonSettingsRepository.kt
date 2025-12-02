@@ -1,5 +1,6 @@
 package io.github.snd_r.komelia.settings
 
+import io.github.snd_r.komelia.server.ServerType
 import io.github.snd_r.komelia.ui.common.AppTheme
 import io.github.snd_r.komelia.ui.series.BooksLayout
 import io.github.snd_r.komelia.updates.AppVersion
@@ -9,6 +10,9 @@ import kotlin.time.Instant
 interface CommonSettingsRepository {
     fun getServerUrl(): Flow<String>
     suspend fun putServerUrl(url: String)
+    
+    fun getServerType(): Flow<ServerType>
+    suspend fun putServerType(type: ServerType)
 
     fun getCardWidth(): Flow<Int>
     suspend fun putCardWidth(cardWidth: Int)

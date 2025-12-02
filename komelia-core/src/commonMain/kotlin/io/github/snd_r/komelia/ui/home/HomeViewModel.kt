@@ -5,6 +5,8 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import io.github.snd_r.komelia.AppNotifications
+import io.github.snd_r.komelia.server.KomgaTypeConverters
+import io.github.snd_r.komelia.server.MediaServer
 import io.github.snd_r.komelia.ui.LoadState
 import io.github.snd_r.komelia.ui.LoadState.Uninitialized
 import io.github.snd_r.komelia.ui.common.cards.defaultCardWidth
@@ -17,7 +19,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted.Companion.Eagerly
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -35,12 +36,14 @@ import snd.komga.client.sse.KomgaEvent.ReadProgressSeriesEvent
 import snd.komga.client.sse.KomgaEvent.SeriesEvent
 
 class HomeViewModel(
-    private val seriesClient: KomgaSeriesClient,
-    private val bookClient: KomgaBookClient,
+    private val seriesClient: KomgaSeriesClient?,
+    private val bookClient: KomgaBookClient?,
     private val appNotifications: AppNotifications,
-    private val komgaEvents: SharedFlow<KomgaEvent>,
+    private val komgaEvents: SharedFlow<KomgaEvent>?,
     private val filterRepository: HomeScreenFilterRepository,
     cardWidthFlow: Flow<Dp>,
+    private val mediaServer: MediaServer? = null,
+    private val isOpdsMode: Boolean = false,
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
     val cardWidth = cardWidthFlow.stateIn(screenModelScope, Eagerly, defaultCardWidth.dp)
 
@@ -54,7 +57,11 @@ class HomeViewModel(
         if (state.value !is Uninitialized) return
 
         load()
-        startKomgaEventListener()
+        
+        // Only start Komga event listener if not in OPDS mode
+        if (!isOpdsMode && komgaEvents != null) {
+            startKomgaEventListener()
+        }
 
         reloadJobsFlow.onEach {
             reloadEventsEnabled.first { it }
@@ -80,6 +87,17 @@ class HomeViewModel(
     }
 
     private suspend fun fetchFilterData(filter: HomeScreenFilter): HomeFilterData? {
+        return if (isOpdsMode && mediaServer != null) {
+            fetchOpdsFilterData(filter)
+        } else {
+            fetchKomgaFilterData(filter)
+        }
+    }
+    
+    private suspend fun fetchKomgaFilterData(filter: HomeScreenFilter): HomeFilterData? {
+        val bookClient = this.bookClient ?: return null
+        val seriesClient = this.seriesClient ?: return null
+        
         return when (filter) {
             is BooksHomeScreenFilter.CustomFilter -> {
                 val books = bookClient.getBookList(
@@ -126,11 +144,68 @@ class HomeViewModel(
                 )
             }
         }
+    }
+    
+    private suspend fun fetchOpdsFilterData(filter: HomeScreenFilter): HomeFilterData? {
+        val server = mediaServer ?: return null
+        
+        return when (filter) {
+            is BooksHomeScreenFilter.CustomFilter -> {
+                // OPDS doesn't support custom filters, return empty or search results
+                val searchTerm = filter.textSearch
+                if (searchTerm != null) {
+                    val result = server.searchBooks(searchTerm, 0, filter.pageSize)
+                    BookFilterData(books = result.content.map { KomgaTypeConverters.serverBookToKomgaBook(it) }, filter = filter)
+                } else {
+                    BookFilterData(books = emptyList(), filter = filter)
+                }
+            }
 
+            is BooksHomeScreenFilter.OnDeck -> {
+                // OPDS typically doesn't support "on deck" - return in-progress books or empty
+                val result = server.getInProgressBooks(0, filter.pageSize)
+                BookFilterData(result.content.map { KomgaTypeConverters.serverBookToKomgaBook(it) }, filter)
+            }
+
+            is SeriesHomeScreenFilter.CustomFilter -> {
+                // OPDS doesn't support custom filters, return empty or search results
+                val searchTerm = filter.textSearch
+                if (searchTerm != null) {
+                    val result = server.searchSeries(searchTerm, 0, filter.pageSize)
+                    SeriesFilterData(series = result.content.map { KomgaTypeConverters.serverSeriesToKomgaSeries(it) }, filter = filter)
+                } else {
+                    SeriesFilterData(series = emptyList(), filter = filter)
+                }
+            }
+
+            is SeriesHomeScreenFilter.RecentlyAdded -> {
+                val result = server.getRecentlyAddedSeries(0, filter.pageSize)
+                SeriesFilterData(
+                    series = result.content.map { KomgaTypeConverters.serverSeriesToKomgaSeries(it) },
+                    filter = filter
+                )
+            }
+
+            is SeriesHomeScreenFilter.RecentlyUpdated -> {
+                // OPDS doesn't distinguish recently added vs updated, use same endpoint
+                val result = server.getRecentlyAddedSeries(0, filter.pageSize)
+                SeriesFilterData(
+                    series = result.content.map { KomgaTypeConverters.serverSeriesToKomgaSeries(it) },
+                    filter = filter
+                )
+            }
+        }
     }
 
-    fun seriesMenuActions() = SeriesMenuActions(seriesClient, appNotifications, screenModelScope)
-    fun bookMenuActions() = BookMenuActions(bookClient, appNotifications, screenModelScope)
+    fun seriesMenuActions(): SeriesMenuActions? {
+        val client = seriesClient ?: return null
+        return SeriesMenuActions(client, appNotifications, screenModelScope)
+    }
+    
+    fun bookMenuActions(): BookMenuActions? {
+        val client = bookClient ?: return null
+        return BookMenuActions(client, appNotifications, screenModelScope)
+    }
 
     fun stopKomgaEventsHandler() {
         reloadEventsEnabled.value = false
@@ -141,7 +216,8 @@ class HomeViewModel(
     }
 
     private fun startKomgaEventListener() {
-        komgaEvents.onEach { event ->
+        val events = komgaEvents ?: return
+        events.onEach { event ->
             when (event) {
                 is BookEvent -> {
                     reloadJobsFlow.tryEmit(Unit)

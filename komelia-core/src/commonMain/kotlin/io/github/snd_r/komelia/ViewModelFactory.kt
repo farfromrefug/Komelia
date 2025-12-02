@@ -7,6 +7,7 @@ import io.github.snd_r.komelia.platform.PlatformType
 import io.github.snd_r.komelia.settings.CommonSettingsRepository
 import io.github.snd_r.komelia.settings.ImageReaderSettingsRepository
 import io.github.snd_r.komelia.settings.SecretsRepository
+import io.github.snd_r.komelia.ui.AppSharedState
 import io.github.snd_r.komelia.ui.BookSiblingsContext
 import io.github.snd_r.komelia.ui.KomgaSharedState
 import io.github.snd_r.komelia.ui.MainScreenViewModel
@@ -120,6 +121,8 @@ class ViewModelFactory(
         userClient = komgaClientFactory.userClient(),
         libraryClient = komgaClientFactory.libraryClient(),
     )
+    
+    val appSharedState = AppSharedState()
 
     private val komgaEventSource = ManagedKomgaEvents(
         eventSourceFactory = komgaClientFactory::sseSession,
@@ -141,28 +144,34 @@ class ViewModelFactory(
     fun getLibraryViewModel(
         libraryId: KomgaLibraryId?,
     ): LibraryViewModel {
+        val isOpds = appSharedState.isOpdsMode
         return LibraryViewModel(
-            libraryClient = komgaClientFactory.libraryClient(),
-            collectionClient = komgaClientFactory.collectionClient(),
-            readListsClient = komgaClientFactory.readListClient(),
-            seriesClient = komgaClientFactory.seriesClient(),
-            referentialClient = komgaClientFactory.referentialClient(),
+            libraryClient = if (isOpds) null else komgaClientFactory.libraryClient(),
+            collectionClient = if (isOpds) null else komgaClientFactory.collectionClient(),
+            readListsClient = if (isOpds) null else komgaClientFactory.readListClient(),
+            seriesClient = if (isOpds) null else komgaClientFactory.seriesClient(),
+            referentialClient = if (isOpds) null else komgaClientFactory.referentialClient(),
 
             appNotifications = dependencies.appNotifications,
-            komgaEvents = komgaEventSource.events,
+            komgaEvents = if (isOpds) null else komgaEventSource.events,
             libraryFlow = getLibraryFlow(libraryId),
             settingsRepository = dependencies.settingsRepository,
+            mediaServer = appSharedState.mediaServer.value,
+            isOpdsMode = isOpds
         )
     }
 
     fun getHomeViewModel(): HomeViewModel {
+        val isOpds = appSharedState.isOpdsMode
         return HomeViewModel(
-            seriesClient = komgaClientFactory.seriesClient(),
-            bookClient = komgaClientFactory.bookClient(),
+            seriesClient = if (isOpds) null else komgaClientFactory.seriesClient(),
+            bookClient = if (isOpds) null else komgaClientFactory.bookClient(),
             appNotifications = dependencies.appNotifications,
-            komgaEvents = komgaEventSource.events,
+            komgaEvents = if (isOpds) null else komgaEventSource.events,
             filterRepository = dependencies.homeScreenFilterRepository,
             cardWidthFlow = getGridCardWidth(),
+            mediaServer = appSharedState.mediaServer.value,
+            isOpdsMode = isOpds
         )
     }
 
@@ -182,19 +191,23 @@ class ViewModelFactory(
     }
 
     fun getNavigationViewModel(navigator: Navigator): MainScreenViewModel {
+        val isOpds = appSharedState.isOpdsMode
         return MainScreenViewModel(
-            libraryClient = komgaClientFactory.libraryClient(),
+            libraryClient = if (isOpds) null else komgaClientFactory.libraryClient(),
             appNotifications = dependencies.appNotifications,
             navigator = navigator,
-            komgaEvents = komgaEventSource.events,
+            komgaEvents = if (isOpds) null else komgaEventSource.events,
             screenReloadFlow = screenReloadEvents,
             searchBarState = SearchBarState(
-                seriesClient = komgaClientFactory.seriesClient(),
-                bookClient = komgaClientFactory.bookClient(),
+                seriesClient = if (isOpds) null else komgaClientFactory.seriesClient(),
+                bookClient = if (isOpds) null else komgaClientFactory.bookClient(),
                 appNotifications = dependencies.appNotifications,
-                libraries = komgaSharedState.libraries
+                libraries = komgaSharedState.libraries,
+                mediaServer = appSharedState.mediaServer.value,
+                isOpdsMode = isOpds
             ),
             libraries = komgaSharedState.libraries,
+            isOpdsMode = isOpds
         )
     }
 
@@ -283,7 +296,8 @@ class ViewModelFactory(
             komgaLibraryClient = komgaClientFactory.libraryClient(),
             komgaSharedState = komgaSharedState,
             notifications = dependencies.appNotifications,
-            platform = platformType
+            platform = platformType,
+            appSharedState = appSharedState
         )
     }
 
@@ -456,19 +470,21 @@ class ViewModelFactory(
     }
 
     fun getSettingsNavigationViewModel(rootNavigator: Navigator): SettingsNavigationViewModel {
+        val isOpds = appSharedState.isOpdsMode
         return SettingsNavigationViewModel(
             rootNavigator = rootNavigator,
             appNotifications = dependencies.appNotifications,
-            userClient = komgaClientFactory.userClient(),
+            userClient = if (isOpds) null else komgaClientFactory.userClient(),
             komgaSharedState = komgaSharedState,
             secretsRepository = secretsRepository,
             currentServerUrl = settingsRepository.getServerUrl(),
-            bookClient = komgaClientFactory.bookClient(),
+            bookClient = if (isOpds) null else komgaClientFactory.bookClient(),
             latestVersion = settingsRepository.getLastCheckedReleaseVersion(),
             komfEnabled = dependencies.komfSettingsRepository.getKomfEnabled(),
             platformType = platformType,
             updatesEnabled = dependencies.appUpdater != null,
-            user = komgaSharedState.authenticatedUser
+            user = komgaSharedState.authenticatedUser,
+            isOpdsMode = isOpds
         )
     }
 

@@ -67,6 +67,7 @@ fun SettingsNavigationMenu(
     onLogout: () -> Unit,
     user: KomgaUser?,
     contentColor: Color,
+    isOpdsMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val platform = LocalPlatform.current
@@ -81,49 +82,55 @@ fun SettingsNavigationMenu(
             color = contentColor,
         )
 
-        NavigationButton(
-            label = "My Authentication Activity",
-            onClick = { onNavigation(AuthenticationActivityScreen(true)) },
-            isSelected = currentScreen is AuthenticationActivityScreen && currentScreen.forMe,
-            color = contentColor,
-        )
+        // Hide Authentication Activity for OPDS servers (not supported)
+        if (!isOpdsMode) {
+            NavigationButton(
+                label = "My Authentication Activity",
+                onClick = { onNavigation(AuthenticationActivityScreen(true)) },
+                isSelected = currentScreen is AuthenticationActivityScreen && currentScreen.forMe,
+                color = contentColor,
+            )
+        }
 
-        HorizontalDivider(Modifier.padding(vertical = 10.dp))
-        Text("Server Settings", style = MaterialTheme.typography.titleSmall)
+        // Hide Server Settings section for OPDS servers (not supported)
+        if (!isOpdsMode) {
+            HorizontalDivider(Modifier.padding(vertical = 10.dp))
+            Text("Server Settings", style = MaterialTheme.typography.titleSmall)
 
-        NavigationButton(
-            label = "General",
-            onClick = { onNavigation(ServerSettingsScreen()) },
-            isSelected = currentScreen is ServerSettingsScreen,
-            color = contentColor,
-        )
+            NavigationButton(
+                label = "General",
+                onClick = { onNavigation(ServerSettingsScreen()) },
+                isSelected = currentScreen is ServerSettingsScreen,
+                color = contentColor,
+            )
 
-        NavigationButton(
-            label = "Users",
-            onClick = { onNavigation(UsersScreen()) },
-            isSelected = currentScreen is UsersScreen,
-            color = contentColor,
-        )
-        NavigationButton(
-            label = "Authentication Activity",
-            onClick = { onNavigation(AuthenticationActivityScreen(false)) },
-            isSelected = currentScreen is AuthenticationActivityScreen && !currentScreen.forMe,
-            color = contentColor,
-        )
-        NavigationButton(
-            label = "Media Management",
-            onClick = { onNavigation(MediaAnalysisScreen()) },
-            isSelected = currentScreen is MediaAnalysisScreen,
-            error = hasMediaErrors,
-            color = contentColor,
-        )
+            NavigationButton(
+                label = "Users",
+                onClick = { onNavigation(UsersScreen()) },
+                isSelected = currentScreen is UsersScreen,
+                color = contentColor,
+            )
+            NavigationButton(
+                label = "Authentication Activity",
+                onClick = { onNavigation(AuthenticationActivityScreen(false)) },
+                isSelected = currentScreen is AuthenticationActivityScreen && !currentScreen.forMe,
+                color = contentColor,
+            )
+            NavigationButton(
+                label = "Media Management",
+                onClick = { onNavigation(MediaAnalysisScreen()) },
+                isSelected = currentScreen is MediaAnalysisScreen,
+                error = hasMediaErrors,
+                color = contentColor,
+            )
 
-        NavigationButton(
-            label = "Announcements",
-            onClick = { onNavigation(AnnouncementsScreen()) },
-            isSelected = currentScreen is AnnouncementsScreen,
-            color = contentColor,
-        )
+            NavigationButton(
+                label = "Announcements",
+                onClick = { onNavigation(AnnouncementsScreen()) },
+                isSelected = currentScreen is AnnouncementsScreen,
+                color = contentColor,
+            )
+        }
         HorizontalDivider(Modifier.padding(vertical = 10.dp))
 
         Text("App Settings", style = MaterialTheme.typography.titleSmall)
@@ -159,7 +166,8 @@ fun SettingsNavigationMenu(
         }
 
         HorizontalDivider(Modifier.padding(vertical = 10.dp))
-        if (user != null && user.roleAdmin()) {
+        // Hide Komf settings for OPDS servers (not supported)
+        if (!isOpdsMode && user != null && user.roleAdmin()) {
             Text("Komf Settings", style = MaterialTheme.typography.titleSmall)
             NavigationButton(
                 label = "Connection",

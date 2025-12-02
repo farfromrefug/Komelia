@@ -110,9 +110,16 @@ class LibraryScreen(
                         }
 
                         when (vm.currentTab) {
-                            SERIES -> BrowseTab(vm.seriesTabState)
-                            COLLECTIONS -> CollectionsTab(vm.collectionsTabState)
-                            READ_LISTS -> ReadListsTab(vm.readListsTabState)
+                            SERIES -> {
+                                // Use OPDS tab state if available, otherwise Komga tab state
+                                if (vm.opdsSeriesTabState != null) {
+                                    OpdsBrowseTab(vm.opdsSeriesTabState)
+                                } else if (vm.seriesTabState != null) {
+                                    BrowseTab(vm.seriesTabState)
+                                }
+                            }
+                            COLLECTIONS -> vm.collectionsTabState?.let { CollectionsTab(it) }
+                            READ_LISTS -> vm.readListsTabState?.let { ReadListsTab(it) }
                         }
                     }
                 }
@@ -159,6 +166,46 @@ class LibraryScreen(
                     onPageChange = seriesTabState::onPageChange,
 
                     minSize = seriesTabState.cardWidth.collectAsState().value,
+                )
+            }
+        }
+    }
+
+    @Composable
+    private fun OpdsBrowseTab(opdsTabState: OpdsLibrarySeriesTabState) {
+        val navigator = LocalNavigator.currentOrThrow
+        LaunchedEffect(libraryId) { opdsTabState.initialize(seriesFilter) }
+
+        when (val state = opdsTabState.state.collectAsState().value) {
+            is Error -> ErrorContent(
+                message = state.exception.message ?: "Unknown Error",
+                onReload = opdsTabState::reload
+            )
+
+            else -> {
+                val loading = state is Loading || state is Uninitialized
+                // Simplified series list for OPDS - no advanced filtering, no context menus
+                SeriesListContent(
+                    series = opdsTabState.series,
+                    seriesActions = null, // No context menu actions for OPDS
+                    seriesTotalCount = opdsTabState.totalSeriesCount,
+                    onSeriesClick = { navigator.push(seriesScreen(it)) },
+
+                    editMode = opdsTabState.isInEditMode.collectAsState().value,
+                    onEditModeChange = opdsTabState::onEditModeChange,
+                    selectedSeries = opdsTabState.selectedSeries,
+                    onSeriesSelect = opdsTabState::onSeriesSelect,
+
+                    isLoading = loading,
+                    filterState = null, // No advanced filter for OPDS
+
+                    currentPage = opdsTabState.currentSeriesPage,
+                    totalPages = opdsTabState.totalSeriesPages,
+                    pageSize = opdsTabState.pageLoadSize.collectAsState().value,
+                    onPageSizeChange = opdsTabState::onPageSizeChange,
+                    onPageChange = opdsTabState::onPageChange,
+
+                    minSize = opdsTabState.cardWidth.collectAsState().value,
                 )
             }
         }
@@ -242,7 +289,7 @@ class LibraryScreen(
 fun LibraryToolBar(
     library: KomgaLibrary?,
     currentTab: LibraryTab,
-    libraryActions: LibraryMenuActions,
+    libraryActions: LibraryMenuActions?,
     collectionsCount: Int,
     readListsCount: Int,
     onBrowseClick: () -> Unit,
@@ -258,7 +305,7 @@ fun LibraryToolBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         item {
-            if (library != null) {
+            if (library != null && libraryActions != null) {
                 Box {
                     IconButton(
                         onClick = { showOptionsMenu = true }

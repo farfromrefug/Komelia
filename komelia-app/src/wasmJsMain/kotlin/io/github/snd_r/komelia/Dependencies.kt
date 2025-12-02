@@ -21,6 +21,7 @@ import io.github.snd_r.komelia.image.coil.KomgaSeriesThumbnailMapper
 import io.github.snd_r.komelia.image.processing.ColorCorrectionStep
 import io.github.snd_r.komelia.image.processing.ImageProcessingPipeline
 import io.github.snd_r.komelia.platform.BrowserWindowState
+import io.github.snd_r.komelia.server.DefaultMediaServerFactory
 import io.github.snd_r.komelia.settings.CookieStoreSecretsRepository
 import io.github.snd_r.komelia.settings.ImageReaderSettingsRepository
 import io.ktor.client.*
@@ -40,6 +41,7 @@ import snd.komelia.db.repository.ActorReaderSettingsRepository
 import snd.komelia.db.repository.ActorSettingsRepository
 import snd.komelia.db.settings.LocalStorageSettingsRepository
 import snd.komelia.db.settings.NoopFontsRepository
+import snd.komelia.db.settings.NoopHomeScreenFilterRepository
 import snd.komelia.image.ImageDecoder
 import snd.komelia.image.wasm.client.WorkerImageDecoder
 import snd.komf.client.KomfClientFactory
@@ -50,6 +52,7 @@ suspend fun initDependencies(stateFlowScope: CoroutineScope): WasmDependencyCont
     workerDecoder.init()
 
     val localStorageRepository = LocalStorageSettingsRepository()
+    val homeScreenFilterRepository = NoopHomeScreenFilterRepository()
     val appSettingsRepository = ActorSettingsRepository(
         SettingsStateActor(
             localStorageRepository.getSettings(),
@@ -111,6 +114,11 @@ suspend fun initDependencies(stateFlowScope: CoroutineScope): WasmDependencyCont
         decoder = workerDecoder,
         imageFactory = readerImageFactory
     )
+    
+    val localReadProgressRepository = io.github.snd_r.komelia.settings.InMemoryLocalReadProgressRepository()
+
+    // Create MediaServerFactory for OPDS support
+    val mediaServerFactory = DefaultMediaServerFactory(httpClientProvider = { ktorClient })
 
     return WasmDependencyContainer(
         settingsRepository = appSettingsRepository,
@@ -122,16 +130,19 @@ suspend fun initDependencies(stateFlowScope: CoroutineScope): WasmDependencyCont
         colorCurvesPresetsRepository = curvePresetsRepository,
         colorLevelsPresetRepository = levelsPresetsRepository,
         bookColorCorrectionRepository = bookColorCorrectionRepository,
+        localReadProgressRepository = localReadProgressRepository,
 
         komgaClientFactory = komgaClientFactory,
         komfClientFactory = komfClientFactory,
+        mediaServerFactory = mediaServerFactory,
         appUpdater = null,
         coilImageLoader = coil,
         bookImageLoader = readerImageLoader,
         windowState = BrowserWindowState(),
         imageDecoder = workerDecoder,
         readerImageFactory = readerImageFactory,
-        colorCorrectionStep = colorCorrectionStep
+        colorCorrectionStep = colorCorrectionStep,
+        homeScreenFilterRepository = homeScreenFilterRepository
     )
 }
 

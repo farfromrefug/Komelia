@@ -1,5 +1,6 @@
 package snd.komelia.db
 
+import io.github.snd_r.komelia.server.ServerType
 import io.github.snd_r.komelia.ui.common.AppTheme
 import io.github.snd_r.komelia.ui.series.BooksLayout
 import io.github.snd_r.komelia.updates.AppVersion
@@ -10,6 +11,7 @@ import kotlin.time.Instant
 data class AppSettings(
     val username: String = "admin@example.org",
     val serverUrl: String = "http://localhost:25600",
+    val serverType: ServerType = ServerType.KOMGA,
 
     val cardWidth: Int = 170,
     val seriesPageLoadSize: Int = 20,

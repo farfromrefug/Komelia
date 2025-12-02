@@ -13,10 +13,12 @@ import io.github.snd_r.komelia.image.KomeliaUpscaler
 import io.github.snd_r.komelia.image.ReaderImageFactory
 import io.github.snd_r.komelia.image.processing.ColorCorrectionStep
 import io.github.snd_r.komelia.platform.AppWindowState
+import io.github.snd_r.komelia.server.MediaServerFactory
 import io.github.snd_r.komelia.settings.CommonSettingsRepository
 import io.github.snd_r.komelia.settings.EpubReaderSettingsRepository
 import io.github.snd_r.komelia.settings.ImageReaderSettingsRepository
 import io.github.snd_r.komelia.settings.KomfSettingsRepository
+import io.github.snd_r.komelia.settings.LocalReadProgressRepository
 import io.github.snd_r.komelia.settings.SecretsRepository
 import io.github.snd_r.komelia.strings.AppStrings
 import io.github.snd_r.komelia.updates.AppUpdater
@@ -39,9 +41,11 @@ interface DependencyContainer {
     val secretsRepository: SecretsRepository
     val komfSettingsRepository: KomfSettingsRepository
     val homeScreenFilterRepository: HomeScreenFilterRepository
+    val localReadProgressRepository: LocalReadProgressRepository
 
     val komgaClientFactory: KomgaClientFactory
     val komfClientFactory: KomfClientFactory
+    val mediaServerFactory: MediaServerFactory?
     val appNotifications: AppNotifications
     val appUpdater: AppUpdater?
     val imageDecoder: ImageDecoder

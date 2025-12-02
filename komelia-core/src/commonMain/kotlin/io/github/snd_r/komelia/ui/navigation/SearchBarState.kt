@@ -7,6 +7,8 @@ import androidx.compose.runtime.snapshotFlow
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import io.github.snd_r.komelia.AppNotifications
+import io.github.snd_r.komelia.server.KomgaTypeConverters
+import io.github.snd_r.komelia.server.MediaServer
 import io.github.snd_r.komelia.ui.search.SearchResults
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.StateFlow
@@ -25,10 +27,12 @@ import snd.komga.client.series.KomgaSeriesSearch
 
 @OptIn(FlowPreview::class)
 class SearchBarState(
-    private val seriesClient: KomgaSeriesClient,
-    private val bookClient: KomgaBookClient,
+    private val seriesClient: KomgaSeriesClient?,
+    private val bookClient: KomgaBookClient?,
     private val appNotifications: AppNotifications,
-    private val libraries: StateFlow<List<KomgaLibrary>>
+    private val libraries: StateFlow<List<KomgaLibrary>>,
+    private val mediaServer: MediaServer? = null,
+    private val isOpdsMode: Boolean = false,
 ) : ScreenModel {
 
     private var currentQuery by mutableStateOf("")
@@ -56,7 +60,15 @@ class SearchBarState(
             if (query.isBlank()) {
                 series = emptyList()
                 books = emptyList()
-            } else {
+            } else if (isOpdsMode && mediaServer != null) {
+                // Use MediaServer for OPDS mode
+                val seriesResult = mediaServer.searchSeries(query, 0, 10)
+                series = seriesResult.content.map { KomgaTypeConverters.serverSeriesToKomgaSeries(it) }
+
+                val booksResult = mediaServer.searchBooks(query, 0, 10)
+                books = booksResult.content.map { KomgaTypeConverters.serverBookToKomgaBook(it) }
+            } else if (seriesClient != null && bookClient != null) {
+                // Use Komga clients for Komga mode
                 series = seriesClient.getSeriesList(
                     KomgaSeriesSearch(fullTextSearch = query),
                     pageRequest = KomgaPageRequest(size = 10)
@@ -84,4 +96,3 @@ class SearchBarState(
 
     fun searchResults() = SearchResults(series, books)
 }
-

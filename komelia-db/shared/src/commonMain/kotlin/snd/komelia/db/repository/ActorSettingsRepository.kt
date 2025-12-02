@@ -1,5 +1,6 @@
 package snd.komelia.db.repository
 
+import io.github.snd_r.komelia.server.ServerType
 import io.github.snd_r.komelia.settings.CommonSettingsRepository
 import io.github.snd_r.komelia.ui.common.AppTheme
 import io.github.snd_r.komelia.ui.series.BooksLayout
@@ -21,6 +22,14 @@ class ActorSettingsRepository(
 
     override suspend fun putServerUrl(url: String) {
         actor.transform { it.copy(serverUrl = url) }
+    }
+    
+    override fun getServerType(): Flow<ServerType> {
+        return actor.state.map { it.serverType }.distinctUntilChanged()
+    }
+    
+    override suspend fun putServerType(type: ServerType) {
+        actor.transform { it.copy(serverType = type) }
     }
 
     override fun getCardWidth(): Flow<Int> {

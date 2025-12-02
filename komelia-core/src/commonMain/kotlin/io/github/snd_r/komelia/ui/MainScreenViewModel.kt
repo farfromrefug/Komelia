@@ -31,17 +31,21 @@ import snd.komga.client.sse.KomgaEvent.SeriesDeleted
 import snd.komga.client.sse.KomgaEvent.TaskQueueStatus
 
 class MainScreenViewModel(
-    private val libraryClient: KomgaLibraryClient,
+    private val libraryClient: KomgaLibraryClient?,
     private val appNotifications: AppNotifications,
     private val navigator: Navigator,
-    private val komgaEvents: SharedFlow<KomgaEvent>,
+    private val komgaEvents: SharedFlow<KomgaEvent>?,
     private val screenReloadFlow: MutableSharedFlow<Unit>,
     val searchBarState: SearchBarState,
     val libraries: StateFlow<List<KomgaLibrary>>,
+    private val isOpdsMode: Boolean = false,
 ) : ScreenModel {
 
     init {
-        screenModelScope.launch { startEventListener() }
+        // Only start event listener for Komga mode (OPDS doesn't support SSE)
+        if (!isOpdsMode && komgaEvents != null) {
+            screenModelScope.launch { startEventListener() }
+        }
     }
 
     val komgaTaskQueueStatus = MutableStateFlow<TaskQueueStatus?>(null)
@@ -53,8 +57,9 @@ class MainScreenViewModel(
         else navBarState.close()
     }
 
-    fun getLibraryActions(): LibraryMenuActions {
-        return LibraryMenuActions(libraryClient, appNotifications, screenModelScope)
+    fun getLibraryActions(): LibraryMenuActions? {
+        val client = libraryClient ?: return null
+        return LibraryMenuActions(client, appNotifications, screenModelScope)
     }
 
     fun onScreenReload() {
@@ -64,7 +69,8 @@ class MainScreenViewModel(
     //Assuming that delete events come from bottom (book->series->library)
     //this should switch screens in correct order in case of a library or series delete
     private suspend fun startEventListener() {
-        komgaEvents.collect { event ->
+        val events = komgaEvents ?: return
+        events.collect { event ->
             when (event) {
                 is TaskQueueStatus -> komgaTaskQueueStatus.value = event
                 is BookDeleted -> onBookDeletedEvent(event)

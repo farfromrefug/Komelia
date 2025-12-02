@@ -74,7 +74,8 @@ class SettingsScreen : Screen {
                                 onLogout = vm::logout,
                                 contentColor = MaterialTheme.colorScheme.surfaceVariant,
                                 modifier = Modifier.width(settingsDesktopNavMenuWidth),
-                                user = vm.user.collectAsState().value
+                                user = vm.user.collectAsState().value,
+                                isOpdsMode = vm.isOpdsMode
                             )
                         }
                     },

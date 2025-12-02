@@ -51,6 +51,7 @@ import io.ktor.client.plugins.UserAgent
 import io.ktor.client.plugins.cookies.HttpCookies
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.http.Url
+import io.github.snd_r.komelia.server.DefaultMediaServerFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -204,6 +205,11 @@ suspend fun initDependencies(
         appNotifications = appNotifications
     )
     val appUpdater = AndroidAppUpdater(updateClient, context)
+    val localReadProgressRepository = io.github.snd_r.komelia.settings.InMemoryLocalReadProgressRepository()
+
+    // Create MediaServerFactory for OPDS support
+    val mediaServerFactory = DefaultMediaServerFactory(httpClientProvider = { httpClient })
+
     return AndroidDependencyContainer(
         settingsRepository = settingsRepository,
         epubReaderSettingsRepository = epubReaderSettingsRepository,
@@ -215,10 +221,12 @@ suspend fun initDependencies(
         secretsRepository = secretsRepository,
         komfSettingsRepository = komfSettingsRepository,
         homeScreenFilterRepository = homeScreenFilterRepository,
+        localReadProgressRepository = localReadProgressRepository,
 
         appNotifications = appNotifications,
         appUpdater = appUpdater,
         komgaClientFactory = komgaClientFactory,
+        mediaServerFactory = mediaServerFactory,
         coilImageLoader = coil,
         platformContext = context,
         bookImageLoader = readerImageLoader,
