@@ -60,8 +60,8 @@ fun HomeContent(
 
     cardWidth: Dp,
     onSeriesClick: (KomgaSeries) -> Unit,
-    seriesMenuActions: SeriesMenuActions,
-    bookMenuActions: BookMenuActions,
+    seriesMenuActions: SeriesMenuActions?,
+    bookMenuActions: BookMenuActions?,
     onBookClick: (KomgaBook) -> Unit,
     onBookReadClick: (KomgaBook, Boolean) -> Unit,
 ) {
@@ -202,8 +202,8 @@ private fun DisplayContent(
     gridState: LazyGridState,
     cardWidth: Dp,
     onSeriesClick: (KomgaSeries) -> Unit,
-    seriesMenuActions: SeriesMenuActions,
-    bookMenuActions: BookMenuActions,
+    seriesMenuActions: SeriesMenuActions?,
+    bookMenuActions: BookMenuActions?,
     onBookClick: (KomgaBook) -> Unit,
     onBookReadClick: (KomgaBook, Boolean) -> Unit,
 ) {
@@ -242,7 +242,7 @@ private fun DisplayContent(
 private fun LazyGridScope.BookFilterEntry(
     label: String,
     books: List<KomgaBook>,
-    bookMenuActions: BookMenuActions,
+    bookMenuActions: BookMenuActions?,
     onBookClick: (KomgaBook) -> Unit,
     onBookReadClick: (KomgaBook, Boolean) -> Unit,
 ) {
@@ -272,7 +272,7 @@ private fun LazyGridScope.SeriesFilterEntries(
     label: String,
     series: List<KomgaSeries>,
     onSeriesClick: (KomgaSeries) -> Unit,
-    seriesMenuActions: SeriesMenuActions,
+    seriesMenuActions: SeriesMenuActions?,
 ) {
     if (series.isEmpty()) return
     item(span = { GridItemSpan(maxLineSpan) }) {

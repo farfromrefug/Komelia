@@ -159,13 +159,16 @@ class ViewModelFactory(
     }
 
     fun getHomeViewModel(): HomeViewModel {
+        val isOpds = appSharedState.isOpdsMode
         return HomeViewModel(
-            seriesClient = komgaClientFactory.seriesClient(),
-            bookClient = komgaClientFactory.bookClient(),
+            seriesClient = if (isOpds) null else komgaClientFactory.seriesClient(),
+            bookClient = if (isOpds) null else komgaClientFactory.bookClient(),
             appNotifications = dependencies.appNotifications,
-            komgaEvents = komgaEventSource.events,
+            komgaEvents = if (isOpds) null else komgaEventSource.events,
             filterRepository = dependencies.homeScreenFilterRepository,
             cardWidthFlow = getGridCardWidth(),
+            mediaServer = appSharedState.mediaServer.value,
+            isOpdsMode = isOpds
         )
     }
 
