@@ -144,17 +144,20 @@ class ViewModelFactory(
     fun getLibraryViewModel(
         libraryId: KomgaLibraryId?,
     ): LibraryViewModel {
+        val isOpds = appSharedState.isOpdsMode
         return LibraryViewModel(
-            libraryClient = komgaClientFactory.libraryClient(),
-            collectionClient = komgaClientFactory.collectionClient(),
-            readListsClient = komgaClientFactory.readListClient(),
-            seriesClient = komgaClientFactory.seriesClient(),
-            referentialClient = komgaClientFactory.referentialClient(),
+            libraryClient = if (isOpds) null else komgaClientFactory.libraryClient(),
+            collectionClient = if (isOpds) null else komgaClientFactory.collectionClient(),
+            readListsClient = if (isOpds) null else komgaClientFactory.readListClient(),
+            seriesClient = if (isOpds) null else komgaClientFactory.seriesClient(),
+            referentialClient = if (isOpds) null else komgaClientFactory.referentialClient(),
 
             appNotifications = dependencies.appNotifications,
-            komgaEvents = komgaEventSource.events,
+            komgaEvents = if (isOpds) null else komgaEventSource.events,
             libraryFlow = getLibraryFlow(libraryId),
             settingsRepository = dependencies.settingsRepository,
+            mediaServer = appSharedState.mediaServer.value,
+            isOpdsMode = isOpds
         )
     }
 

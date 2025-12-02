@@ -46,7 +46,7 @@ import snd.komga.client.series.KomgaSeries
 fun SeriesListContent(
     series: List<KomgaSeries>,
     seriesTotalCount: Int,
-    seriesActions: SeriesMenuActions,
+    seriesActions: SeriesMenuActions?,
     onSeriesClick: (KomgaSeries) -> Unit,
 
     editMode: Boolean,
