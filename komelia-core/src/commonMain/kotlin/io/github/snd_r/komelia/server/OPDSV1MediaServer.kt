@@ -25,7 +25,7 @@ private val logger = KotlinLogging.logger {}
  * - /api/v1/opds/surprise - Random books
  * - /api/v1/opds/catalog?q={searchTerms} - Search
  */
-class BookloreMediaServer(
+class OPDSV1MediaServer(
     private val opdsClient: OpdsClient,
     private val serverName: String = "Booklore"
 ) : MediaServer {

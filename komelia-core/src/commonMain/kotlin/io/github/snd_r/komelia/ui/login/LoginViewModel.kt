@@ -12,7 +12,7 @@ import io.github.snd_r.komelia.platform.PlatformType
 import io.github.snd_r.komelia.platform.PlatformType.DESKTOP
 import io.github.snd_r.komelia.platform.PlatformType.MOBILE
 import io.github.snd_r.komelia.platform.PlatformType.WEB_KOMF
-import io.github.snd_r.komelia.server.BookloreMediaServer
+import io.github.snd_r.komelia.server.OPDSV1MediaServer
 import io.github.snd_r.komelia.server.ServerType
 import io.github.snd_r.komelia.server.createDetectionHttpClient
 import io.github.snd_r.komelia.settings.CommonSettingsRepository
@@ -192,7 +192,7 @@ class LoginViewModel(
             password = password,
             httpClient = client
         )
-        val server = BookloreMediaServer(opdsClient, "Booklore")
+        val server = OPDSV1MediaServer(opdsClient, "OPDSV1")
         
         // Get user and libraries from OPDS server
         val serverUser = server.getCurrentUser()
