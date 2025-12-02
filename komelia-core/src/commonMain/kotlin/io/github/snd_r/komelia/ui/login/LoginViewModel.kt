@@ -7,11 +7,12 @@ import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import io.github.snd_r.komelia.AppNotification
 import io.github.snd_r.komelia.AppNotifications
+import io.github.snd_r.komelia.opds.client.HttpOpdsClient
 import io.github.snd_r.komelia.platform.PlatformType
 import io.github.snd_r.komelia.platform.PlatformType.DESKTOP
 import io.github.snd_r.komelia.platform.PlatformType.MOBILE
 import io.github.snd_r.komelia.platform.PlatformType.WEB_KOMF
-import io.github.snd_r.komelia.server.MediaServer
+import io.github.snd_r.komelia.server.OpdsMediaServer
 import io.github.snd_r.komelia.server.ServerType
 import io.github.snd_r.komelia.settings.CommonSettingsRepository
 import io.github.snd_r.komelia.settings.SecretsRepository
@@ -20,6 +21,7 @@ import io.github.snd_r.komelia.ui.KomgaSharedState
 import io.github.snd_r.komelia.ui.LoadState
 import io.github.snd_r.komelia.ui.LoadState.Uninitialized
 import io.github.snd_r.komelia.ui.error.formatExceptionMessage
+import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.*
 import io.ktor.http.HttpStatusCode.Companion.Unauthorized
@@ -39,7 +41,7 @@ class LoginViewModel(
     private val notifications: AppNotifications,
     private val platform: PlatformType,
     private val appSharedState: AppSharedState? = null,
-    private val mediaServer: MediaServer? = null,
+    private val httpClient: HttpClient? = null,
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
 
     var url by mutableStateOf("")
@@ -177,7 +179,13 @@ class LoginViewModel(
         username: String? = null,
         password: String? = null
     ) {
-        val server = mediaServer ?: throw IllegalStateException("MediaServer not configured for OPDS mode")
+        // Create OPDS client and server dynamically based on current URL and credentials
+        val opdsClient = HttpOpdsClient(
+            baseUrl = url,
+            username = username,
+            password = password
+        )
+        val server = OpdsMediaServer(opdsClient, "OPDS Server")
         
         // Get user and libraries from OPDS server
         val serverUser = server.getCurrentUser()

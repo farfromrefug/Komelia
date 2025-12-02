@@ -287,8 +287,7 @@ class ViewModelFactory(
             komgaSharedState = komgaSharedState,
             notifications = dependencies.appNotifications,
             platform = platformType,
-            appSharedState = appSharedState,
-            mediaServer = null // TODO: Create media server from factory when available
+            appSharedState = appSharedState
         )
     }
 
