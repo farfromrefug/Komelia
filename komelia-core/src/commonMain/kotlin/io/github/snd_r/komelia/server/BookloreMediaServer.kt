@@ -80,15 +80,52 @@ class BookloreMediaServer(
         try {
             val librariesFeed = opdsClient.getFeed("$OPDS_LIBRARIES")
             
-            // Each publication in the libraries feed represents a library
-            val libraries = librariesFeed.publications?.mapIndexed { index, pub ->
+            // In OPDS 1.x, libraries might be in navigation links or publications
+            // Try publications first (entries in Atom)
+            val libraries = mutableListOf<ServerLibrary>()
+            
+            // Check publications (parsed from Atom entries)
+            librariesFeed.publications?.forEachIndexed { index, pub ->
                 val libraryId = extractLibraryId(pub) ?: "library-$index"
-                ServerLibrary(
+                libraries.add(ServerLibrary(
                     id = ServerId(libraryId),
                     name = pub.metadata.title,
                     unavailable = false
-                )
-            } ?: emptyList()
+                ))
+            }
+            
+            // Also check navigation links (in case libraries are provided as navigation)
+            librariesFeed.navigation?.forEach { navLink ->
+                // Extract library ID from navigation link
+                val libraryId = navLink.href.let { href ->
+                    Regex("libraryId=(\\d+)").find(href)?.groupValues?.get(1)
+                        ?: Regex("/libraries/(\\d+)").find(href)?.groupValues?.get(1)
+                }
+                if (libraryId != null && libraries.none { it.id.value == libraryId }) {
+                    libraries.add(ServerLibrary(
+                        id = ServerId(libraryId),
+                        name = navLink.title ?: "Library $libraryId",
+                        unavailable = false
+                    ))
+                }
+            }
+            
+            // Also check feed links with subsection relation
+            librariesFeed.links.filter { 
+                it.rel == OpdsLinkRel.SUBSECTION || it.rel?.contains("subsection") == true 
+            }.forEach { link ->
+                val libraryId = link.href.let { href ->
+                    Regex("libraryId=(\\d+)").find(href)?.groupValues?.get(1)
+                        ?: Regex("/libraries/(\\d+)").find(href)?.groupValues?.get(1)
+                }
+                if (libraryId != null && libraries.none { it.id.value == libraryId }) {
+                    libraries.add(ServerLibrary(
+                        id = ServerId(libraryId),
+                        name = link.title ?: "Library $libraryId",
+                        unavailable = false
+                    ))
+                }
+            }
             
             return libraries.ifEmpty {
                 // Fallback: create a single "All Books" library
@@ -483,17 +520,30 @@ class BookloreMediaServer(
     
     private fun extractLibraryId(pub: OpdsPublication): String? {
         // Try to extract library ID from the publication links
-        val catalogLink = pub.links.firstOrNull { link ->
-            link.href.contains("libraryId=")
+        // In Booklore, library links have format: /api/v1/opds/catalog?libraryId=X
+        for (link in pub.links) {
+            // Check for libraryId in URL
+            if (link.href.contains("libraryId=")) {
+                val match = Regex("libraryId=(\\d+)").find(link.href)
+                match?.groupValues?.get(1)?.let { return it }
+            }
+            
+            // Check for subsection link that contains the library ID
+            if (link.rel == OpdsLinkRel.SUBSECTION || link.rel == "subsection") {
+                val match = Regex("/libraries/(\\d+)").find(link.href)
+                    ?: Regex("libraryId=(\\d+)").find(link.href)
+                match?.groupValues?.get(1)?.let { return it }
+            }
+            
+            // Check self link
+            if (link.rel == OpdsLinkRel.SELF || link.rel == "self") {
+                val match = Regex("/libraries/(\\d+)").find(link.href)
+                match?.groupValues?.get(1)?.let { return it }
+            }
         }
         
-        return if (catalogLink != null) {
-            val match = Regex("libraryId=(\\d+)").find(catalogLink.href)
-            match?.groupValues?.get(1)
-        } else {
-            // Use identifier or generate from title
-            pub.metadata.identifier ?: pub.metadata.title.hashCode().toString()
-        }
+        // Use identifier or generate from title
+        return pub.metadata.identifier ?: pub.metadata.title.hashCode().toString()
     }
     
     private fun publicationToSeries(pub: OpdsPublication, libraryId: ServerId, index: Int): ServerSeries {
