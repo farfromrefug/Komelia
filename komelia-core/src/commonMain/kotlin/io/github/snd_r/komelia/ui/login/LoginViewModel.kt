@@ -14,6 +14,7 @@ import io.github.snd_r.komelia.platform.PlatformType.MOBILE
 import io.github.snd_r.komelia.platform.PlatformType.WEB_KOMF
 import io.github.snd_r.komelia.server.OpdsMediaServer
 import io.github.snd_r.komelia.server.ServerType
+import io.github.snd_r.komelia.server.createDetectionHttpClient
 import io.github.snd_r.komelia.settings.CommonSettingsRepository
 import io.github.snd_r.komelia.settings.SecretsRepository
 import io.github.snd_r.komelia.ui.AppSharedState
@@ -21,7 +22,6 @@ import io.github.snd_r.komelia.ui.KomgaSharedState
 import io.github.snd_r.komelia.ui.LoadState
 import io.github.snd_r.komelia.ui.LoadState.Uninitialized
 import io.github.snd_r.komelia.ui.error.formatExceptionMessage
-import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.*
 import io.ktor.http.HttpStatusCode.Companion.Unauthorized
@@ -47,7 +47,6 @@ class LoginViewModel(
     private val notifications: AppNotifications,
     private val platform: PlatformType,
     private val appSharedState: AppSharedState? = null,
-    private val httpClient: HttpClient? = null,
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
 
     var url by mutableStateOf("")
@@ -186,11 +185,12 @@ class LoginViewModel(
         password: String? = null
     ) {
         // Create OPDS client and server dynamically based on current URL and credentials
+        val client = createDetectionHttpClient()
         val opdsClient = HttpOpdsClient(
             baseUrl = url,
             username = username,
             password = password,
-            httpClient = TODO()
+            httpClient = client
         )
         val server = OpdsMediaServer(opdsClient, "OPDS Server")
         
