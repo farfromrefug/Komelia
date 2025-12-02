@@ -10,9 +10,12 @@ import snd.komga.client.book.KomgaMediaStatus
 import snd.komga.client.book.KomgaWebLink
 import snd.komga.client.library.KomgaLibraryId
 import snd.komga.client.series.KomgaSeries
+import snd.komga.client.series.KomgaSeriesBookMetadata
 import snd.komga.client.series.KomgaSeriesId
 import snd.komga.client.series.KomgaSeriesMetadata
 import snd.komga.client.series.KomgaSeriesStatus
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 /**
  * Utility functions to convert Server types to Komga types for UI compatibility.
@@ -98,9 +101,9 @@ object KomgaTypeConverters {
             booksReadCount = series.booksReadCount,
             booksUnreadCount = series.booksUnreadCount,
             booksInProgressCount = series.booksInProgressCount,
-            created = series.created,
-            lastModified = series.lastModified,
-            fileLastModified = series.lastModified,
+//            created = series.created,
+//            lastModified = series.lastModified,
+//            fileLastModified = series.lastModified,
             deleted = false,
             oneshot = false,
             metadata = KomgaSeriesMetadata(
@@ -126,20 +129,29 @@ object KomgaTypeConverters {
                 ageRatingLock = false,
                 language = series.metadata.language ?: "",
                 languageLock = false,
-                genres = series.metadata.genres.toSet(),
+                genres = series.metadata.genres.toList(),
                 genresLock = false,
-                tags = series.metadata.tags.toSet(),
+                tags = series.metadata.tags.toList(),
                 tagsLock = false,
                 totalBookCount = series.metadata.totalBookCount,
                 totalBookCountLock = false,
-                sharingLabels = emptySet(),
+                sharingLabels = emptyList(),
                 sharingLabelsLock = false,
                 links = emptyList(),
                 linksLock = false,
                 alternateTitles = emptyList(),
                 alternateTitlesLock = false,
-                created = series.created,
-                lastModified = series.lastModified
+//                created = series.created,
+//                lastModified = series.lastModified
+            ),
+            booksMetadata = KomgaSeriesBookMetadata(
+                authors = series.metadata.authors,
+                tags = series.metadata.tags,
+                summary = series.metadata.summary ?: "",
+                summaryNumber = "",
+                created = series.created ?: Clock.System.now(),
+                lastModified = series.lastModified ?: Clock.System.now(),
+                releaseDate = null
             )
         )
     }
