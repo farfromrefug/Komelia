@@ -2,6 +2,8 @@ package io.github.snd_r.komelia.server
 
 import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
+import snd.komga.client.common.KomgaSort.Direction
+import kotlin.jvm.JvmInline
 
 /**
  * Generic Server Abstraction Layer
@@ -20,6 +22,7 @@ import kotlinx.serialization.Serializable
  * Unique identifier for server entities
  */
 @Serializable
+@JvmInline
 value class ServerId(val value: String)
 
 /**
@@ -47,7 +50,7 @@ data class ServerUser(
     val id: ServerId,
     val email: String,
     val isAdmin: Boolean = false,
-    val roles: List<String> = emptyList()
+    val roles: Set<String> = emptySet()
 )
 
 /**
@@ -118,7 +121,7 @@ data class ServerBook(
     val sortNumber: Double?,
     val pageCount: Int,
     val fileSize: Long,
-    val mediaType: String,
+    val mediaType: String?,
     val readProgress: ServerReadProgress?,
     val thumbnailUrl: String?,
     val created: Instant?,
@@ -178,7 +181,7 @@ data class ServerBookPage(
     val mediaType: String,
     val width: Int?,
     val height: Int?,
-    val fileSize: Long?
+    val fileSize: Int?
 )
 
 /**
@@ -187,7 +190,7 @@ data class ServerBookPage(
 data class ServerPageResult<T>(
     val content: List<T>,
     val totalPages: Int,
-    val totalElements: Long,
+    val totalElements: Int,
     val currentPage: Int,
     val pageSize: Int,
     val first: Boolean,
@@ -209,7 +212,7 @@ data class ServerPageResult<T>(
         fun <T> of(items: List<T>): ServerPageResult<T> = ServerPageResult(
             content = items,
             totalPages = 1,
-            totalElements = items.size.toLong(),
+            totalElements = items.size,
             currentPage = 0,
             pageSize = items.size,
             first = true,
@@ -224,10 +227,5 @@ data class ServerPageResult<T>(
  */
 data class ServerSort(
     val property: String,
-    val direction: SortDirection
+    val direction: Direction
 )
-
-enum class SortDirection {
-    ASC,
-    DESC
-}

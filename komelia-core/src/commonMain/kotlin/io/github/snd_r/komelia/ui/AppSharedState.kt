@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withTimeout
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryId
+import snd.komga.client.library.ScanInterval
 import snd.komga.client.user.KomgaUser
 import snd.komga.client.user.KomgaUserId
 
@@ -108,7 +109,6 @@ class AppSharedState {
             labelsAllow = emptySet(),
             labelsExclude = emptySet(),
             ageRestriction = null,
-            restrictions = emptyMap()
         )
     }
     
@@ -117,7 +117,7 @@ class AppSharedState {
             id = io.github.snd_r.komelia.server.ServerId(user.id.value),
             email = user.email,
             isAdmin = user.roles.contains("ADMIN"),
-            roles = user.roles.toList()
+            roles = user.roles.toSet()
         )
     }
     
@@ -137,7 +137,7 @@ class AppSharedState {
             importLocalArtwork = false,
             importBarcodeIsbn = false,
             scanForceModifiedTime = false,
-            scanInterval = "DISABLED",
+            scanInterval = ScanInterval.DISABLED,
             scanOnStartup = false,
             scanCbx = false,
             scanPdf = false,

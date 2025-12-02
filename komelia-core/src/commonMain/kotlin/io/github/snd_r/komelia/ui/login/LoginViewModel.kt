@@ -29,8 +29,14 @@ import io.ktor.utils.io.*
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryClient
+import snd.komga.client.library.KomgaLibraryId
+import snd.komga.client.library.ScanInterval
+import snd.komga.client.library.SeriesCover
+import snd.komga.client.user.KomgaUser
 import snd.komga.client.user.KomgaUserClient
+import snd.komga.client.user.KomgaUserId
 
 class LoginViewModel(
     private val settingsRepository: CommonSettingsRepository,
@@ -47,7 +53,7 @@ class LoginViewModel(
     var url by mutableStateOf("")
     var user by mutableStateOf("")
     var password by mutableStateOf("")
-    var serverType by mutableStateOf(ServerType.KOMGA)
+    var mServerType by mutableStateOf(ServerType.KOMGA)
     var userLoginError by mutableStateOf<String?>(null)
     var autoLoginError by mutableStateOf<String?>(null)
 
@@ -57,7 +63,7 @@ class LoginViewModel(
         screenModelScope.launch {
             url = settingsRepository.getServerUrl().first()
             user = settingsRepository.getCurrentUser().first()
-            serverType = settingsRepository.getServerType().first()
+            mServerType = settingsRepository.getServerType().first()
             when (platform) {
                 MOBILE, DESKTOP -> {
                     if (secretsRepository.getCookie(url) != null) {
@@ -73,7 +79,7 @@ class LoginViewModel(
     }
     
     fun setServerType(type: ServerType) {
-        serverType = type
+        mServerType = type
         screenModelScope.launch {
             settingsRepository.putServerType(type)
         }
@@ -97,7 +103,7 @@ class LoginViewModel(
             userLoginError = null
             settingsRepository.putServerUrl(url)
             settingsRepository.putCurrentUser(user)
-            settingsRepository.putServerType(serverType)
+            settingsRepository.putServerType(mServerType)
             tryUserLogin(user, password)
         }
     }
@@ -155,7 +161,7 @@ class LoginViewModel(
         username: String? = null,
         password: String? = null
     ) {
-        when (serverType) {
+        when (mServerType) {
             ServerType.KOMGA -> tryKomgaLogin(username, password)
             ServerType.OPDS -> tryOpdsLogin(username, password)
         }
@@ -183,7 +189,8 @@ class LoginViewModel(
         val opdsClient = HttpOpdsClient(
             baseUrl = url,
             username = username,
-            password = password
+            password = password,
+            httpClient = TODO()
         )
         val server = OpdsMediaServer(opdsClient, "OPDS Server")
         
@@ -195,8 +202,8 @@ class LoginViewModel(
         appSharedState?.setOpdsState(server, serverUser, serverLibraries)
         
         // Also update the Komga shared state for compatibility with existing UI code
-        val komgaUser = snd.komga.client.user.KomgaUser(
-            id = snd.komga.client.user.KomgaUserId(serverUser.id.value),
+        val komgaUser = KomgaUser(
+            id = KomgaUserId(serverUser.id.value),
             email = serverUser.email,
             roles = serverUser.roles.toSet(),
             sharedAllLibraries = true,
@@ -204,11 +211,10 @@ class LoginViewModel(
             labelsAllow = emptySet(),
             labelsExclude = emptySet(),
             ageRestriction = null,
-            restrictions = emptyMap()
         )
         val komgaLibraries = serverLibraries.map { lib ->
-            snd.komga.client.library.KomgaLibrary(
-                id = snd.komga.client.library.KomgaLibraryId(lib.id.value),
+            KomgaLibrary(
+                id = KomgaLibraryId(lib.id.value),
                 name = lib.name,
                 root = "",
                 importComicInfoBook = false,
@@ -222,7 +228,7 @@ class LoginViewModel(
                 importLocalArtwork = false,
                 importBarcodeIsbn = false,
                 scanForceModifiedTime = false,
-                scanInterval = "DISABLED",
+                scanInterval = ScanInterval.DISABLED,
                 scanOnStartup = false,
                 scanCbx = false,
                 scanPdf = false,
@@ -231,7 +237,7 @@ class LoginViewModel(
                 repairExtensions = false,
                 convertToCbz = false,
                 emptyTrashAfterScan = false,
-                seriesCover = snd.komga.client.library.SeriesCover.FIRST,
+                seriesCover = SeriesCover.FIRST,
                 hashFiles = false,
                 hashPages = false,
                 analyzeDimensions = false,
@@ -243,5 +249,4 @@ class LoginViewModel(
         
         mutableState.value = LoadState.Success(Unit)
     }
-}
 }

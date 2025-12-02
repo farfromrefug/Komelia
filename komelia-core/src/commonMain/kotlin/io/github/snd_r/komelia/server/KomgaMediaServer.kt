@@ -9,6 +9,7 @@ import snd.komga.client.book.KomgaBookMetadata
 import snd.komga.client.book.KomgaBookReadProgressUpdateRequest
 import snd.komga.client.book.KomgaMediaStatus
 import snd.komga.client.common.KomgaPageRequest
+import snd.komga.client.common.KomgaSort
 import snd.komga.client.library.KomgaLibrary
 import snd.komga.client.library.KomgaLibraryClient
 import snd.komga.client.library.KomgaLibraryId
@@ -79,7 +80,7 @@ class KomgaMediaServer(
         val pageRequest = KomgaPageRequest(
             pageIndex = page,
             size = pageSize,
-            sort = sort?.toKomgaSort()
+            sort = sort?.toKomgaSort() ?: KomgaSort.Unsorted
         )
         
         val query = snd.komga.client.series.KomgaSeriesQuery(
@@ -118,7 +119,7 @@ class KomgaMediaServer(
         val pageRequest = KomgaPageRequest(
             pageIndex = page,
             size = pageSize,
-            sort = sort?.toKomgaSort()
+            sort = sort?.toKomgaSort() ?: KomgaSort.Unsorted
         )
         
         val result = bookClient.getBookList(
@@ -152,7 +153,7 @@ class KomgaMediaServer(
                 mediaType = page.mediaType,
                 width = page.width,
                 height = page.height,
-                fileSize = page.size
+                fileSize = page.size.toInt()
             )
         }
     }
@@ -376,8 +377,8 @@ class KomgaMediaServer(
             booksUnreadCount = booksUnreadCount,
             booksInProgressCount = booksInProgressCount,
             description = metadata.summary.takeIf { it.isNotEmpty() },
-            created = created,
-            lastModified = lastModified,
+            created = null,
+            lastModified = null,
             thumbnailUrl = null, // URL is constructed separately
             metadata = metadata.toServerMetadata()
         )
@@ -414,9 +415,9 @@ class KomgaMediaServer(
             seriesId = ServerId(seriesId.value),
             libraryId = ServerId(libraryId.value),
             name = metadata.title,
-            sortNumber = metadata.numberSort,
+            sortNumber = metadata.numberSort.toDouble(),
             pageCount = media.pagesCount,
-            fileSize = size,
+            fileSize = size.toLong(),
             mediaType = media.mediaType,
             readProgress = readProgress?.let { progress ->
                 ServerReadProgress(
@@ -436,12 +437,12 @@ class KomgaMediaServer(
     private fun KomgaBookMetadata.toServerMetadata(): ServerBookMetadata {
         return ServerBookMetadata(
             title = title,
-            sortTitle = titleSort,
+            sortTitle = null,
             summary = summary.takeIf { it.isNotEmpty() },
             number = number.takeIf { it.isNotEmpty() },
             releaseDate = releaseDate?.toString(),
-            publisher = publisher.takeIf { it.isNotEmpty() },
-            genres = emptyList(), // Komga books don't have genres directly
+            publisher = null,
+            genres = emptyList<String>(), // Komga books don't have genres directly
             tags = tags,
             language = null,
             authors = authors.map { ServerAuthor(it.name, it.role) },
@@ -450,16 +451,17 @@ class KomgaMediaServer(
     }
     
     private fun ServerSort.toKomgaSort(): snd.komga.client.common.KomgaSort {
-        return snd.komga.client.common.KomgaSort(
-            orders = listOf(
-                snd.komga.client.common.KomgaSort.Order(
-                    property = property,
-                    direction = when (direction) {
-                        SortDirection.ASC -> snd.komga.client.common.KomgaSort.Direction.ASC
-                        SortDirection.DESC -> snd.komga.client.common.KomgaSort.Direction.DESC
-                    }
-                )
-            )
-        )
+        return snd.komga.client.common.KomgaSort.KomgaBooksSort.byTitle(direction)
+//        return snd.komga.client.common.KomgaSort(
+//            orders = listOf(
+//                snd.komga.client.common.KomgaSort.Order(
+//                    property = property,
+//                    direction = when (direction) {
+//                        SortDirection.ASC -> snd.komga.client.common.KomgaSort.Direction.ASC
+//                        SortDirection.DESC -> snd.komga.client.common.KomgaSort.Direction.DESC
+//                    }
+//                )
+//            )
+//        )
     }
 }

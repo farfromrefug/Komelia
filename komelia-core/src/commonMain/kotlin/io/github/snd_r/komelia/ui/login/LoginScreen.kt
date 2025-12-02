@@ -51,7 +51,7 @@ class LoginScreen : Screen {
                     ) { ScreenContent(vm, rootNavigator) }
 
                 WEB_KOMF -> SettingsScreenContainer(
-                    title = if (vm.serverType == ServerType.KOMGA) "Komga Login" else "OPDS Login"
+                    title = if (vm.mServerType == ServerType.KOMGA) "Komga Login" else "OPDS Login"
                 ) {
                     ScreenContent(vm, rootNavigator)
                 }
@@ -77,7 +77,7 @@ class LoginScreen : Screen {
                 onUserChange = { viewModel.user = it },
                 password = viewModel.password,
                 onPasswordChange = { viewModel.password = it },
-                serverType = viewModel.serverType,
+                serverType = viewModel.mServerType,
                 onServerTypeChange = viewModel::setServerType,
                 userLoginError = viewModel.userLoginError,
                 autoLoginError = viewModel.autoLoginError,

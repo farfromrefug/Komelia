@@ -54,7 +54,7 @@ class OpdsMediaServer(
             id = ServerId("opds-user"),
             email = "opds@local",
             isAdmin = false,
-            roles = emptyList()
+            roles = emptySet()
         )
     }
     
@@ -545,7 +545,7 @@ class OpdsMediaServer(
         return ServerPageResult(
             content = pageContent,
             totalPages = totalPages,
-            totalElements = items.size.toLong(),
+            totalElements = items.size,
             currentPage = page,
             pageSize = pageSize,
             first = page == 0,
