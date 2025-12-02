@@ -69,7 +69,8 @@ class MobileSettingsScreen : Screen {
                     onLogout = vm::logout,
                     user = vm.user.collectAsState().value,
                     contentColor = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.weight(1f, false)
+                    modifier = Modifier.weight(1f, false),
+                    isOpdsMode = vm.isOpdsMode
                 )
 
                 Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.systemBars))

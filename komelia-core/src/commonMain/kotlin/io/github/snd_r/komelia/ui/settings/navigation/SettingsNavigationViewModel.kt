@@ -31,16 +31,17 @@ import snd.komga.client.user.KomgaUserClient
 class SettingsNavigationViewModel(
     private val rootNavigator: Navigator,
     private val appNotifications: AppNotifications,
-    private val userClient: KomgaUserClient,
+    private val userClient: KomgaUserClient?,
     private val komgaSharedState: KomgaSharedState,
     private val secretsRepository: SecretsRepository,
     private val currentServerUrl: Flow<String>,
-    private val bookClient: KomgaBookClient,
+    private val bookClient: KomgaBookClient?,
     private val latestVersion: Flow<AppVersion?>,
     private val platformType: PlatformType,
     val updatesEnabled: Boolean,
     val user: StateFlow<KomgaUser?>,
     komfEnabled: Flow<Boolean>,
+    val isOpdsMode: Boolean = false,
 ) : ScreenModel {
     var hasMediaErrors by mutableStateOf(false)
         private set
@@ -50,15 +51,18 @@ class SettingsNavigationViewModel(
 
     suspend fun initialize() {
         appNotifications.runCatchingToNotifications {
-            val pageResponse = bookClient.getBookList(
-                conditionBuilder = allOfBooks {
-                    mediaStatus { isEqualTo(KomgaMediaStatus.ERROR) }
-                    mediaStatus { isEqualTo(KomgaMediaStatus.UNSUPPORTED) }
-                },
-                pageRequest = KomgaPageRequest(size = 0)
-            )
-            if (pageResponse.numberOfElements > 0) {
-                hasMediaErrors = true
+            // Skip media error check for OPDS servers (not supported)
+            if (!isOpdsMode && bookClient != null) {
+                val pageResponse = bookClient.getBookList(
+                    conditionBuilder = allOfBooks {
+                        mediaStatus { isEqualTo(KomgaMediaStatus.ERROR) }
+                        mediaStatus { isEqualTo(KomgaMediaStatus.UNSUPPORTED) }
+                    },
+                    pageRequest = KomgaPageRequest(size = 0)
+                )
+                if (pageResponse.numberOfElements > 0) {
+                    hasMediaErrors = true
+                }
             }
             val latestVersion = latestVersion.first()
             newVersionIsAvailable = latestVersion != null && AppVersion.current < latestVersion
@@ -68,7 +72,10 @@ class SettingsNavigationViewModel(
     fun logout() {
         appNotifications.runCatchingToNotifications(screenModelScope) {
             secretsRepository.deleteCookie(currentServerUrl.first())
-            runCatching { userClient.logout() }
+            // Only try to logout from Komga if not in OPDS mode
+            if (!isOpdsMode && userClient != null) {
+                runCatching { userClient.logout() }
+            }
             komgaSharedState.reset()
             when (platformType) {
                 MOBILE, DESKTOP -> rootNavigator.replaceAll(LoginScreen())

@@ -460,19 +460,21 @@ class ViewModelFactory(
     }
 
     fun getSettingsNavigationViewModel(rootNavigator: Navigator): SettingsNavigationViewModel {
+        val isOpds = appSharedState.isOpdsMode
         return SettingsNavigationViewModel(
             rootNavigator = rootNavigator,
             appNotifications = dependencies.appNotifications,
-            userClient = komgaClientFactory.userClient(),
+            userClient = if (isOpds) null else komgaClientFactory.userClient(),
             komgaSharedState = komgaSharedState,
             secretsRepository = secretsRepository,
             currentServerUrl = settingsRepository.getServerUrl(),
-            bookClient = komgaClientFactory.bookClient(),
+            bookClient = if (isOpds) null else komgaClientFactory.bookClient(),
             latestVersion = settingsRepository.getLastCheckedReleaseVersion(),
             komfEnabled = dependencies.komfSettingsRepository.getKomfEnabled(),
             platformType = platformType,
             updatesEnabled = dependencies.appUpdater != null,
-            user = komgaSharedState.authenticatedUser
+            user = komgaSharedState.authenticatedUser,
+            isOpdsMode = isOpds
         )
     }
 
