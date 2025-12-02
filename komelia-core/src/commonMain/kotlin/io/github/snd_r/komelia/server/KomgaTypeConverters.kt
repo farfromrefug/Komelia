@@ -51,20 +51,20 @@ object KomgaTypeConverters {
                 summaryLock = false,
                 number = book.metadata.number ?: "",
                 numberLock = false,
-                numberSort = book.sortNumber ?: 0.0,
+                numberSort = (book.sortNumber ?: 0.0).toFloat(),
                 numberSortLock = false,
                 releaseDate = null,
                 releaseDateLock = false,
-                authors = book.metadata.authors.map { 
-                    KomgaAuthor(it.name, it.role) 
+                authors = book.metadata.authors.map {
+                    KomgaAuthor(it.name, it.role)
                 },
                 authorsLock = false,
-                tags = book.metadata.tags.toSet(),
+                tags = book.metadata.tags.toList(),
                 tagsLock = false,
                 isbn = "",
                 isbnLock = false,
-                links = book.metadata.links.map { 
-                    KomgaWebLink(it.label, it.url) 
+                links = book.metadata.links.map {
+                    KomgaWebLink(it.label, it.url)
                 },
                 linksLock = false,
                 created = book.created,
@@ -84,7 +84,9 @@ object KomgaTypeConverters {
             deleted = false,
             fileHash = "",
             fileLastModified = book.lastModified,
-            oneshot = false
+            oneshot = false,
+            created = book.created,
+            lastModified = book.lastModified
         )
     }
 
