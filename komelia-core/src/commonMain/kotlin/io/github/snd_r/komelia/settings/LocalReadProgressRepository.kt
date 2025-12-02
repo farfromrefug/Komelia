@@ -66,7 +66,7 @@ data class LocalReadProgress(
     val totalPages: Int,
     val isCompleted: Boolean,
     val lastReadTimestamp: Long,
-    val percentComplete: Float = if (totalPages > 0) (currentPage.toFloat() / totalPages) * 100 else 0f
+    val percentComplete: Float = if (totalPages > 0) minOf((currentPage.toFloat() / totalPages) * 100, 100f) else if (isCompleted) 100f else 0f
 )
 
 /**

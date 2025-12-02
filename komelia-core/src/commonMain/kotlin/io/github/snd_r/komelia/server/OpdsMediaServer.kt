@@ -31,6 +31,8 @@ class OpdsMediaServer(
     
     private var rootFeed: OpdsFeed? = null
     private val libraryFeeds = mutableMapOf<ServerId, OpdsFeed>()
+    // Cache for publications grouped by series (when series are generated from publication metadata)
+    private val seriesPublicationsCache = mutableMapOf<ServerId, List<OpdsPublication>>()
     
     override val supportsWriteOperations: Boolean = false
     override val supportsRealTimeEvents: Boolean = false
@@ -94,24 +96,66 @@ class OpdsMediaServer(
     ): ServerPageResult<ServerSeries> {
         val feed = getLibraryFeed(libraryId)
         
-        // In OPDS, "groups" can represent series
+        // First, check for groups which explicitly represent series in OPDS
         val groups = feed.groups ?: emptyList()
-        val series = groups.map { group ->
+        val seriesFromGroups = groups.map { group ->
             groupToSeries(group, libraryId)
         }
         
-        // If no groups, create series from publications directly
-        // (treating each publication as a standalone "series")
-        val seriesFromPublications = if (series.isEmpty() && feed.publications != null) {
-            feed.publications.mapIndexed { index, pub ->
-                publicationToSeries(pub, libraryId, index)
+        // Then, try to group publications by their "belongsTo.series" metadata
+        val publications = feed.publications ?: emptyList()
+        val seriesFromPublications = if (seriesFromGroups.isEmpty() && publications.isNotEmpty()) {
+            // Group publications by series name
+            val groupedBySeries = publications.groupBy { pub ->
+                pub.metadata.belongsTo?.series?.firstOrNull()?.name ?: pub.metadata.title
+            }
+            
+            groupedBySeries.entries.mapIndexed { index, (seriesName, pubs) ->
+                val firstPub = pubs.first()
+                val seriesInfo = firstPub.metadata.belongsTo?.series?.firstOrNull()
+                
+                // Create a series link if we have series info
+                val seriesId = seriesInfo?.links?.firstOrNull()?.href 
+                    ?: seriesInfo?.identifier
+                    ?: "generated-series-${seriesName.hashCode()}"
+                
+                // Cache the publications for this series
+                seriesPublicationsCache[ServerId(seriesId)] = pubs
+                
+                ServerSeries(
+                    id = ServerId(seriesId),
+                    libraryId = libraryId,
+                    name = seriesName,
+                    sortName = seriesInfo?.sortAs ?: seriesName,
+                    status = SeriesStatus.UNKNOWN,
+                    booksCount = pubs.size,
+                    booksReadCount = 0,
+                    booksUnreadCount = pubs.size,
+                    booksInProgressCount = 0,
+                    description = firstPub.metadata.description,
+                    created = firstPub.metadata.published?.let { parseInstant(it) },
+                    lastModified = firstPub.metadata.modified?.let { parseInstant(it) },
+                    thumbnailUrl = firstPub.getThumbnailUrl(),
+                    metadata = metadataToSeriesMetadata(firstPub.metadata)
+                )
             }
         } else {
             emptyList()
         }
         
-        val allSeries = series + seriesFromPublications
-        return createPage(allSeries, page, pageSize)
+        val allSeries = seriesFromGroups + seriesFromPublications
+        
+        // Apply search filter if provided
+        val filteredSeries = if (!searchTerm.isNullOrBlank()) {
+            allSeries.filter { series ->
+                series.name.contains(searchTerm, ignoreCase = true) ||
+                series.metadata.summary?.contains(searchTerm, ignoreCase = true) == true
+            }
+        } else {
+            allSeries
+        }
+        
+        return createPage(filteredSeries, page, pageSize)
     }
     
     override suspend fun getSeries(seriesId: ServerId): ServerSeries {
@@ -143,14 +187,29 @@ class OpdsMediaServer(
         pageSize: Int,
         sort: ServerSort?
     ): ServerPageResult<ServerBook> {
-        val feed = opdsClient.getFeed(seriesId.value)
-        val publications = feed.publications ?: emptyList()
+        // First, check if we have cached publications for this series
+        val cachedPubs = seriesPublicationsCache[seriesId]
+        val publications = if (cachedPubs != null) {
+            cachedPubs
+        } else {
+            // Try to fetch from the feed URL
+            try {
+                val feed = opdsClient.getFeed(seriesId.value)
+                feed.publications ?: emptyList()
+            } catch (e: Exception) {
+                logger.warn { "Failed to fetch series feed ${seriesId.value}: ${e.message}" }
+                emptyList()
+            }
+        }
         
         val books = publications.mapIndexed { index, pub ->
             publicationToBook(pub, seriesId, ServerId(opdsClient.baseUrl), index)
         }
         
-        return createPage(books, page, pageSize)
+        // Sort by position if available, placing items without sort numbers at the end
+        val sortedBooks = books.sortedWith(compareBy(nullsLast()) { it.sortNumber })
+        
+        return createPage(sortedBooks, page, pageSize)
     }
     
     override suspend fun getBook(bookId: ServerId): ServerBook {

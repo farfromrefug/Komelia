@@ -39,10 +39,11 @@ class InMemoryLocalReadProgressRepository : LocalReadProgressRepository {
             ))
         } else {
             // Create a completed entry even if we didn't have previous progress
+            // When we don't know page count, we just mark it as completed
             progressMap.value = progressMap.value + (bookId to LocalReadProgress(
                 bookId = bookId,
-                currentPage = 0,
-                totalPages = 0,
+                currentPage = 1,
+                totalPages = 1,
                 isCompleted = true,
                 lastReadTimestamp = System.currentTimeMillis(),
                 percentComplete = 100f
