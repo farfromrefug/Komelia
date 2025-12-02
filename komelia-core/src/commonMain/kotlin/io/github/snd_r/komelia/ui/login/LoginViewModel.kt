@@ -11,8 +11,11 @@ import io.github.snd_r.komelia.platform.PlatformType
 import io.github.snd_r.komelia.platform.PlatformType.DESKTOP
 import io.github.snd_r.komelia.platform.PlatformType.MOBILE
 import io.github.snd_r.komelia.platform.PlatformType.WEB_KOMF
+import io.github.snd_r.komelia.server.MediaServer
+import io.github.snd_r.komelia.server.ServerType
 import io.github.snd_r.komelia.settings.CommonSettingsRepository
 import io.github.snd_r.komelia.settings.SecretsRepository
+import io.github.snd_r.komelia.ui.AppSharedState
 import io.github.snd_r.komelia.ui.KomgaSharedState
 import io.github.snd_r.komelia.ui.LoadState
 import io.github.snd_r.komelia.ui.LoadState.Uninitialized
@@ -35,11 +38,14 @@ class LoginViewModel(
     private val komgaSharedState: KomgaSharedState,
     private val notifications: AppNotifications,
     private val platform: PlatformType,
+    private val appSharedState: AppSharedState? = null,
+    private val mediaServer: MediaServer? = null,
 ) : StateScreenModel<LoadState<Unit>>(Uninitialized) {
 
     var url by mutableStateOf("")
     var user by mutableStateOf("")
     var password by mutableStateOf("")
+    var serverType by mutableStateOf(ServerType.KOMGA)
     var userLoginError by mutableStateOf<String?>(null)
     var autoLoginError by mutableStateOf<String?>(null)
 
@@ -49,6 +55,7 @@ class LoginViewModel(
         screenModelScope.launch {
             url = settingsRepository.getServerUrl().first()
             user = settingsRepository.getCurrentUser().first()
+            serverType = settingsRepository.getServerType().first()
             when (platform) {
                 MOBILE, DESKTOP -> {
                     if (secretsRepository.getCookie(url) != null) {
@@ -60,6 +67,13 @@ class LoginViewModel(
 
                 WEB_KOMF -> tryAutologin()
             }
+        }
+    }
+    
+    fun setServerType(type: ServerType) {
+        serverType = type
+        screenModelScope.launch {
+            settingsRepository.putServerType(type)
         }
     }
 
@@ -81,6 +95,7 @@ class LoginViewModel(
             userLoginError = null
             settingsRepository.putServerUrl(url)
             settingsRepository.putCurrentUser(user)
+            settingsRepository.putServerType(serverType)
             tryUserLogin(user, password)
         }
     }
@@ -138,18 +153,87 @@ class LoginViewModel(
         username: String? = null,
         password: String? = null
     ) {
+        when (serverType) {
+            ServerType.KOMGA -> tryKomgaLogin(username, password)
+            ServerType.OPDS -> tryOpdsLogin(username, password)
+        }
+    }
+    
+    private suspend fun tryKomgaLogin(
+        username: String? = null,
+        password: String? = null
+    ) {
         val user =
             if (username != null && password != null) komgaUserClient.getMe(username, password, true)
             else komgaUserClient.getMe()
 
         val libraries = komgaLibraryClient.getLibraries()
         komgaSharedState.setStateValues(user, libraries)
+        appSharedState?.setKomgaState(user, libraries)
+        mutableState.value = LoadState.Success(Unit)
+    }
+    
+    private suspend fun tryOpdsLogin(
+        username: String? = null,
+        password: String? = null
+    ) {
+        val server = mediaServer ?: throw IllegalStateException("MediaServer not configured for OPDS mode")
+        
+        // Get user and libraries from OPDS server
+        val serverUser = server.getCurrentUser()
+        val serverLibraries = server.getLibraries()
+        
+        // Update the shared state for OPDS mode
+        appSharedState?.setOpdsState(server, serverUser, serverLibraries)
+        
+        // Also update the Komga shared state for compatibility with existing UI code
+        val komgaUser = snd.komga.client.user.KomgaUser(
+            id = snd.komga.client.user.KomgaUserId(serverUser.id.value),
+            email = serverUser.email,
+            roles = serverUser.roles.toSet(),
+            sharedAllLibraries = true,
+            sharedLibrariesIds = emptySet(),
+            labelsAllow = emptySet(),
+            labelsExclude = emptySet(),
+            ageRestriction = null,
+            restrictions = emptyMap()
+        )
+        val komgaLibraries = serverLibraries.map { lib ->
+            snd.komga.client.library.KomgaLibrary(
+                id = snd.komga.client.library.KomgaLibraryId(lib.id.value),
+                name = lib.name,
+                root = "",
+                importComicInfoBook = false,
+                importComicInfoSeries = false,
+                importComicInfoCollection = false,
+                importComicInfoReadList = false,
+                importComicInfoSeriesAppendVolume = false,
+                importEpubBook = false,
+                importEpubSeries = false,
+                importMylarSeries = false,
+                importLocalArtwork = false,
+                importBarcodeIsbn = false,
+                scanForceModifiedTime = false,
+                scanInterval = "DISABLED",
+                scanOnStartup = false,
+                scanCbx = false,
+                scanPdf = false,
+                scanEpub = false,
+                scanDirectoryExclusions = emptyList(),
+                repairExtensions = false,
+                convertToCbz = false,
+                emptyTrashAfterScan = false,
+                seriesCover = snd.komga.client.library.SeriesCover.FIRST,
+                hashFiles = false,
+                hashPages = false,
+                analyzeDimensions = false,
+                unavailable = lib.unavailable,
+                oneshotsDirectory = null
+            )
+        }
+        komgaSharedState.setStateValues(komgaUser, komgaLibraries)
+        
         mutableState.value = LoadState.Success(Unit)
     }
 }
-
-sealed class LoginResult {
-    data object Loading : LoginResult()
-    data object Error : LoginResult()
-    data object Success : LoginResult()
 }

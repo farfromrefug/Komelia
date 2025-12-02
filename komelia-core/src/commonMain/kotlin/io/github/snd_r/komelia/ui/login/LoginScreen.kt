@@ -21,6 +21,7 @@ import io.github.snd_r.komelia.platform.PlatformTitleBar
 import io.github.snd_r.komelia.platform.PlatformType.DESKTOP
 import io.github.snd_r.komelia.platform.PlatformType.MOBILE
 import io.github.snd_r.komelia.platform.PlatformType.WEB_KOMF
+import io.github.snd_r.komelia.server.ServerType
 import io.github.snd_r.komelia.ui.LoadState.Error
 import io.github.snd_r.komelia.ui.LoadState.Loading
 import io.github.snd_r.komelia.ui.LoadState.Success
@@ -49,7 +50,9 @@ class LoginScreen : Screen {
                         contentAlignment = Alignment.Center
                     ) { ScreenContent(vm, rootNavigator) }
 
-                WEB_KOMF -> SettingsScreenContainer(title = "Komga Login") {
+                WEB_KOMF -> SettingsScreenContainer(
+                    title = if (vm.serverType == ServerType.KOMGA) "Komga Login" else "OPDS Login"
+                ) {
                     ScreenContent(vm, rootNavigator)
                 }
             }
@@ -74,6 +77,8 @@ class LoginScreen : Screen {
                 onUserChange = { viewModel.user = it },
                 password = viewModel.password,
                 onPasswordChange = { viewModel.password = it },
+                serverType = viewModel.serverType,
+                onServerTypeChange = viewModel::setServerType,
                 userLoginError = viewModel.userLoginError,
                 autoLoginError = viewModel.autoLoginError,
                 onAutoLoginRetry = viewModel::retryAutoLogin,

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -39,6 +40,7 @@ import io.github.snd_r.komelia.platform.PlatformType
 import io.github.snd_r.komelia.platform.PlatformType.DESKTOP
 import io.github.snd_r.komelia.platform.PlatformType.MOBILE
 import io.github.snd_r.komelia.platform.cursorForHand
+import io.github.snd_r.komelia.server.ServerType
 import io.github.snd_r.komelia.ui.LocalPlatform
 import io.github.snd_r.komelia.ui.common.OutlinedHttpTextField
 import io.github.snd_r.komelia.ui.common.withTextFieldNavigation
@@ -54,6 +56,8 @@ fun LoginContent(
     onUserChange: (String) -> Unit,
     password: String,
     onPasswordChange: (String) -> Unit,
+    serverType: ServerType,
+    onServerTypeChange: (ServerType) -> Unit,
     userLoginError: String?,
     autoLoginError: String?,
     onAutoLoginRetry: () -> Unit,
@@ -81,7 +85,7 @@ fun LoginContent(
         val platform = LocalPlatform.current
         when (platform) {
             MOBILE, DESKTOP -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Komga Login")
+                Text(if (serverType == ServerType.KOMGA) "Komga Login" else "OPDS Login")
                 LoginForm(
                     url = url,
                     onUrlChange = onUrlChange,
@@ -89,6 +93,8 @@ fun LoginContent(
                     onUserChange = onUserChange,
                     password = password,
                     onPasswordChange = onPasswordChange,
+                    serverType = serverType,
+                    onServerTypeChange = onServerTypeChange,
                     errorMessage = userLoginError,
                     onLogin = onLogin,
                     textFieldsModifier = Modifier
@@ -119,6 +125,8 @@ fun LoginContent(
                         onUserChange = onUserChange,
                         password = password,
                         onPasswordChange = onPasswordChange,
+                        serverType = serverType,
+                        onServerTypeChange = onServerTypeChange,
                         errorMessage = userLoginError,
                         onLogin = onLogin,
                         textFieldsModifier = Modifier.fillMaxWidth()
@@ -139,6 +147,8 @@ fun ColumnScope.LoginForm(
     onUserChange: (String) -> Unit,
     password: String,
     onPasswordChange: (String) -> Unit,
+    serverType: ServerType,
+    onServerTypeChange: (ServerType) -> Unit,
     errorMessage: String?,
     onLogin: () -> Unit,
     textFieldsModifier: Modifier
@@ -146,6 +156,23 @@ fun ColumnScope.LoginForm(
 
     val coroutineScope = rememberCoroutineScope()
     val (first, second, third) = remember { FocusRequester.createRefs() }
+
+    // Server type selector
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.padding(vertical = 8.dp)
+    ) {
+        FilterChip(
+            selected = serverType == ServerType.KOMGA,
+            onClick = { onServerTypeChange(ServerType.KOMGA) },
+            label = { Text("Komga") }
+        )
+        FilterChip(
+            selected = serverType == ServerType.OPDS,
+            onClick = { onServerTypeChange(ServerType.OPDS) },
+            label = { Text("OPDS (Booklore)") }
+        )
+    }
 
     OutlinedHttpTextField(
         value = url,
@@ -155,7 +182,12 @@ fun ColumnScope.LoginForm(
             .withTextFieldNavigation()
             .focusRequester(first)
             .focusProperties { next = second },
-        placeholder = { Text("localhost:25600") }
+        placeholder = { 
+            Text(
+                if (serverType == ServerType.KOMGA) "localhost:25600" 
+                else "localhost:8080/opds"
+            ) 
+        }
     )
 
     OutlinedTextField(

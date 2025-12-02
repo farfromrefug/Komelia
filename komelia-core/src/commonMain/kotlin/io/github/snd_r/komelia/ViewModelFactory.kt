@@ -7,6 +7,7 @@ import io.github.snd_r.komelia.platform.PlatformType
 import io.github.snd_r.komelia.settings.CommonSettingsRepository
 import io.github.snd_r.komelia.settings.ImageReaderSettingsRepository
 import io.github.snd_r.komelia.settings.SecretsRepository
+import io.github.snd_r.komelia.ui.AppSharedState
 import io.github.snd_r.komelia.ui.BookSiblingsContext
 import io.github.snd_r.komelia.ui.KomgaSharedState
 import io.github.snd_r.komelia.ui.MainScreenViewModel
@@ -120,6 +121,8 @@ class ViewModelFactory(
         userClient = komgaClientFactory.userClient(),
         libraryClient = komgaClientFactory.libraryClient(),
     )
+    
+    val appSharedState = AppSharedState()
 
     private val komgaEventSource = ManagedKomgaEvents(
         eventSourceFactory = komgaClientFactory::sseSession,
@@ -283,7 +286,9 @@ class ViewModelFactory(
             komgaLibraryClient = komgaClientFactory.libraryClient(),
             komgaSharedState = komgaSharedState,
             notifications = dependencies.appNotifications,
-            platform = platformType
+            platform = platformType,
+            appSharedState = appSharedState,
+            mediaServer = null // TODO: Create media server from factory when available
         )
     }
 
