@@ -17,6 +17,7 @@ import io.github.snd_r.komelia.settings.CommonSettingsRepository
 import io.github.snd_r.komelia.settings.EpubReaderSettingsRepository
 import io.github.snd_r.komelia.settings.ImageReaderSettingsRepository
 import io.github.snd_r.komelia.settings.KomfSettingsRepository
+import io.github.snd_r.komelia.settings.LocalReadProgressRepository
 import io.github.snd_r.komelia.settings.SecretsRepository
 import io.github.snd_r.komelia.strings.EnStrings
 import io.github.snd_r.komelia.ui.home.HomeScreenFilterRepository
@@ -40,6 +41,7 @@ class AndroidDependencyContainer(
     override val secretsRepository: SecretsRepository,
     override val komfSettingsRepository: KomfSettingsRepository,
     override val homeScreenFilterRepository: HomeScreenFilterRepository,
+    override val localReadProgressRepository: LocalReadProgressRepository,
 
     override val komgaClientFactory: KomgaClientFactory,
     override val komfClientFactory: KomfClientFactory,

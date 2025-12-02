@@ -204,6 +204,7 @@ suspend fun initDependencies(
         appNotifications = appNotifications
     )
     val appUpdater = AndroidAppUpdater(updateClient, context)
+    val localReadProgressRepository = io.github.snd_r.komelia.settings.InMemoryLocalReadProgressRepository()
     return AndroidDependencyContainer(
         settingsRepository = settingsRepository,
         epubReaderSettingsRepository = epubReaderSettingsRepository,
@@ -215,6 +216,7 @@ suspend fun initDependencies(
         secretsRepository = secretsRepository,
         komfSettingsRepository = komfSettingsRepository,
         homeScreenFilterRepository = homeScreenFilterRepository,
+        localReadProgressRepository = localReadProgressRepository,
 
         appNotifications = appNotifications,
         appUpdater = appUpdater,

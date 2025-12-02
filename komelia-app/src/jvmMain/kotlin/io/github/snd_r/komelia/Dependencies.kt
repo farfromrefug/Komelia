@@ -245,6 +245,8 @@ suspend fun initDependencies(
         .ktor(ktorWithCache)
         .build()
 
+    val localReadProgressRepository = io.github.snd_r.komelia.settings.InMemoryLocalReadProgressRepository()
+
     return DesktopDependencyContainer(
         settingsRepository = settingsRepository,
         epubReaderSettingsRepository = epubReaderSettingsRepository,
@@ -256,6 +258,7 @@ suspend fun initDependencies(
         secretsRepository = secretsRepository,
         komfSettingsRepository = komfSettingsRepository,
         homeScreenFilterRepository = homeScreenFilterRepository,
+        localReadProgressRepository = localReadProgressRepository,
 
         komgaClientFactory = komgaClientFactory,
         mediaServerFactory = null, // TODO: Initialize when OPDS support is fully integrated

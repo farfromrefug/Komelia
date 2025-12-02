@@ -159,6 +159,13 @@ interface MediaServer {
      * Komga supports SSE, OPDS typically doesn't
      */
     val supportsRealTimeEvents: Boolean
+    
+    /**
+     * Check if server-side read progress tracking is supported.
+     * If false, the app should use local storage for progress tracking.
+     */
+    val supportsServerSideProgress: Boolean
+        get() = supportsWriteOperations
 }
 
 /**

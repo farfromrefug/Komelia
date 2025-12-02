@@ -113,6 +113,8 @@ suspend fun initDependencies(stateFlowScope: CoroutineScope): WasmDependencyCont
         decoder = workerDecoder,
         imageFactory = readerImageFactory
     )
+    
+    val localReadProgressRepository = io.github.snd_r.komelia.settings.InMemoryLocalReadProgressRepository()
 
     return WasmDependencyContainer(
         settingsRepository = appSettingsRepository,
@@ -124,6 +126,7 @@ suspend fun initDependencies(stateFlowScope: CoroutineScope): WasmDependencyCont
         colorCurvesPresetsRepository = curvePresetsRepository,
         colorLevelsPresetRepository = levelsPresetsRepository,
         bookColorCorrectionRepository = bookColorCorrectionRepository,
+        localReadProgressRepository = localReadProgressRepository,
 
         komgaClientFactory = komgaClientFactory,
         komfClientFactory = komfClientFactory,
